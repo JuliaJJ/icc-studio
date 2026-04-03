@@ -63,19 +63,34 @@ export function BrandProvider({ children }) {
   const [activeBrand, setActiveBrand] = useState(FALLBACK_BRANDS[0])
 
   useEffect(() => {
-    supabase
-      .from('brands')
-      .select('*')
-      .order('sort_order')
-      .then(({ data, error }) => {
-        if (error || !data?.length) return
-        setBrands(data)
-        setActiveBrand((prev) => {
-          const match = data.find((b) => b.name === prev.name) ?? data[0]
-          applyBrandVars(match)
-          return match
-        })
+    async function fetchBrands() {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*')
+        .order('sort_order')
+      if (error || !data?.length) return
+      setBrands(data)
+      setActiveBrand((prev) => {
+        const match = data.find((b) => b.name === prev.name) ?? data[0]
+        applyBrandVars(match)
+        return match
       })
+    }
+
+    // Fetch immediately if already authenticated, and re-fetch on sign-in
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) fetchBrands()
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) fetchBrands()
+      else {
+        setBrands(FALLBACK_BRANDS)
+        setActiveBrand(FALLBACK_BRANDS[0])
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   function switchBrand(brand) {

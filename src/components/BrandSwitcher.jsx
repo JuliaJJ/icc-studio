@@ -24,9 +24,9 @@ export default function BrandSwitcher() {
       >
         <span
           className="brand-dot"
-          style={{ backgroundColor: activeBrand.accentColor }}
+          style={{ backgroundColor: activeBrand.accent_color }}
         />
-        <span className="brand-short-code">{activeBrand.shortCode}</span>
+        <span className="brand-short-code">{activeBrand.short_code}</span>
         <span className="caret">{open ? '▲' : '▼'}</span>
       </button>
 

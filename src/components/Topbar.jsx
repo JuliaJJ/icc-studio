@@ -25,14 +25,14 @@ export default function Topbar() {
     <header className="topbar">
       <div
         className="topbar-accent-bar"
-        style={{ backgroundColor: activeBrand.accentColor }}
+        style={{ backgroundColor: activeBrand.accent_color }}
       />
       <div className="topbar-inner">
         <div className="topbar-left">
           <span className="brand-badge">
             <span
               className="brand-dot"
-              style={{ backgroundColor: activeBrand.accentColor }}
+              style={{ backgroundColor: activeBrand.accent_color }}
             />
             <span className="brand-badge-name">{activeBrand.name}</span>
           </span>
