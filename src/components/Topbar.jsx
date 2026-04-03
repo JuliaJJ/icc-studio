@@ -19,7 +19,9 @@ const PAGE_TITLES = {
 export default function Topbar() {
   const { activeBrand } = useBrand()
   const location = useLocation()
-  const pageTitle = PAGE_TITLES[location.pathname] ?? 'ICC Studio'
+  const pageTitle = location.pathname.startsWith('/catalog/')
+    ? 'Catalog'
+    : PAGE_TITLES[location.pathname] ?? 'ICC Studio'
 
   return (
     <header className="topbar">

@@ -18,6 +18,7 @@ import AdCampaigns from './pages/AdCampaigns'
 import Revenue from './pages/Revenue'
 import QuickAccess from './pages/QuickAccess'
 import Settings from './pages/Settings'
+import ProductDetail from './pages/ProductDetail'
 import './index.css'
 
 // Set initial brand CSS variables before first render
@@ -46,6 +47,7 @@ createRoot(app).render(
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="calendar" element={<LaunchCalendar />} />
               <Route path="catalog" element={<Catalog />} />
+              <Route path="catalog/:id" element={<ProductDetail />} />
               <Route path="prompts" element={<PromptLibrary />} />
               <Route path="assets" element={<DesignAssets />} />
               <Route path="keywords" element={<Keywords />} />
