@@ -351,3 +351,237 @@ a {
   font-size: 12px;
   color: var(--color-text-tertiary);
 }
+
+/* ─── Sidebar bottom ────────────────────────────────────────────────── */
+.sidebar-bottom {
+  flex-shrink: 0;
+  padding: 0 8px 12px;
+}
+
+.nav-signout {
+  width: 100%;
+  text-align: left;
+  color: var(--color-text-tertiary);
+}
+
+.nav-signout:hover {
+  color: var(--color-text-secondary);
+}
+
+/* ─── Auth loading ──────────────────────────────────────────────────── */
+.auth-loading {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+}
+
+/* ─── Login page ────────────────────────────────────────────────────── */
+.login-page {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-secondary);
+}
+
+.login-card {
+  width: 340px;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 32px 28px 28px;
+}
+
+.login-header {
+  margin-bottom: 24px;
+}
+
+.login-logo {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.login-subtitle {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-error {
+  font-size: 12px;
+  color: #c0392b;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 9px;
+  background: var(--brand-accent);
+  color: #fff;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  transition: opacity 100ms ease;
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+}
+
+/* ─── Shared form elements ──────────────────────────────────────────── */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-input {
+  height: 32px;
+  padding: 0 10px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  background: var(--color-background-primary);
+  transition: border-color 100ms ease;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--brand-accent);
+}
+
+/* ─── Color field ───────────────────────────────────────────────────── */
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-swatch-input {
+  width: 32px;
+  height: 32px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+}
+
+.color-hex-input {
+  flex: 1;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+/* ─── Settings page ─────────────────────────────────────────────────── */
+.settings-page {
+  max-width: 640px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.settings-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+  margin-bottom: 12px;
+}
+
+.settings-brand-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-brand-card {
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 16px 18px 14px;
+}
+
+.settings-brand-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.settings-brand-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.settings-brand-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-fields-row {
+  display: flex;
+  gap: 12px;
+}
+
+.settings-brand-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.settings-saved {
+  font-size: 12px;
+  color: var(--brand-accent);
+}
+
+.settings-error {
+  font-size: 12px;
+  color: #c0392b;
+  flex: 1;
+}
+
+.settings-save-btn {
+  padding: 6px 16px;
+  color: #fff;
+  border-radius: var(--border-radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  transition: opacity 100ms ease;
+}
+
+.settings-save-btn:disabled {
+  opacity: 0.6;
+}

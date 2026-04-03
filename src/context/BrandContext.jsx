@@ -1,61 +1,109 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 
-export const BRANDS = [
+// Fallback used before Supabase load completes
+const FALLBACK_BRANDS = [
   {
-    id: 'bwc',
+    id: null,
     name: 'Bare Wall Club',
-    shortCode: 'BWC',
+    short_code: 'BWC',
     tagline: 'Wall art · Etsy / Gumroad',
-    accentColor: '#1D9E75',
-    tagBgColor: '#E0F5ED',
-    tagTextColor: '#0F5C43',
+    accent_color: '#1D9E75',
+    tag_bg_color: '#E0F5ED',
+    tag_text_color: '#0F5C43',
+    sort_order: 1,
   },
   {
-    id: 'ep',
+    id: null,
     name: 'Esoterica Press',
-    shortCode: 'EP',
+    short_code: 'EP',
     tagline: 'Journals · Tarot / Astrology',
-    accentColor: '#7F77DD',
-    tagBgColor: '#EEEDFB',
-    tagTextColor: '#4A42A8',
+    accent_color: '#7F77DD',
+    tag_bg_color: '#EEEDFB',
+    tag_text_color: '#4A42A8',
+    sort_order: 2,
   },
   {
-    id: 'nac',
+    id: null,
     name: 'Niche Apparel Co.',
-    shortCode: 'NAC',
+    short_code: 'NAC',
     tagline: 'Nurses · Teachers · Trades POD',
-    accentColor: '#D85A30',
-    tagBgColor: '#FAEEE8',
-    tagTextColor: '#943D21',
+    accent_color: '#D85A30',
+    tag_bg_color: '#FAEEE8',
+    tag_text_color: '#943D21',
+    sort_order: 3,
   },
   {
-    id: 'pc',
+    id: null,
     name: 'Prompt Collective',
-    shortCode: 'PC',
+    short_code: 'PC',
     tagline: 'AI prompt packs · Gumroad / Stan',
-    accentColor: '#BA7517',
-    tagBgColor: '#F7EDDA',
-    tagTextColor: '#7A4D0F',
+    accent_color: '#BA7517',
+    tag_bg_color: '#F7EDDA',
+    tag_text_color: '#7A4D0F',
+    sort_order: 4,
   },
 ]
+
+// Export for use in main.jsx to set initial CSS vars
+export const DEFAULT_BRAND = FALLBACK_BRANDS[0]
+
+function applyBrandVars(brand) {
+  const app = document.getElementById('app')
+  if (!app) return
+  app.style.setProperty('--brand-accent', brand.accent_color)
+  app.style.setProperty('--brand-tag-bg', brand.tag_bg_color)
+  app.style.setProperty('--brand-tag-text', brand.tag_text_color)
+}
 
 const BrandContext = createContext(null)
 
 export function BrandProvider({ children }) {
-  const [activeBrand, setActiveBrand] = useState(BRANDS[0])
+  const [brands, setBrands] = useState(FALLBACK_BRANDS)
+  const [activeBrand, setActiveBrand] = useState(FALLBACK_BRANDS[0])
+
+  useEffect(() => {
+    supabase
+      .from('brands')
+      .select('*')
+      .order('sort_order')
+      .then(({ data, error }) => {
+        if (error || !data?.length) return
+        setBrands(data)
+        setActiveBrand((prev) => {
+          const match = data.find((b) => b.name === prev.name) ?? data[0]
+          applyBrandVars(match)
+          return match
+        })
+      })
+  }, [])
 
   function switchBrand(brand) {
     setActiveBrand(brand)
-    const app = document.getElementById('app')
-    if (app) {
-      app.style.setProperty('--brand-accent', brand.accentColor)
-      app.style.setProperty('--brand-tag-bg', brand.tagBgColor)
-      app.style.setProperty('--brand-tag-text', brand.tagTextColor)
-    }
+    applyBrandVars(brand)
+  }
+
+  async function updateBrand(id, updates) {
+    const { data, error } = await supabase
+      .from('brands')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) return error
+
+    setBrands((prev) => prev.map((b) => (b.id === id ? data : b)))
+    setActiveBrand((prev) => {
+      if (prev.id !== id) return prev
+      applyBrandVars(data)
+      return data
+    })
+    return null
   }
 
   return (
-    <BrandContext.Provider value={{ activeBrand, switchBrand, brands: BRANDS }}>
+    <BrandContext.Provider value={{ activeBrand, switchBrand, brands, updateBrand }}>
       {children}
     </BrandContext.Provider>
   )

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useBrand } from '../context/BrandContext'
+import { useAuth } from '../context/AuthContext'
 
 const NAV = [
   {
@@ -32,6 +33,7 @@ const NAV = [
 
 export default function Sidebar() {
   const { activeBrand } = useBrand()
+  const { signOut } = useAuth()
 
   return (
     <aside className="sidebar">
@@ -60,6 +62,22 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
+      <div className="sidebar-bottom">
+        <div className="sidebar-divider" />
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `nav-item ${isActive ? 'nav-item--active' : ''}`
+          }
+        >
+          <span className="nav-icon">⚙</span>
+          <span>Settings</span>
+        </NavLink>
+        <button className="nav-item nav-signout" onClick={signOut}>
+          <span className="nav-icon">↪</span>
+          <span>Sign out</span>
+        </button>
+      </div>
     </aside>
   )
 }
