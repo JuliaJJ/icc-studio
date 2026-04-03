@@ -324,6 +324,12 @@ insert into brands (name, short_code, tagline, accent_color, tag_bg_color, tag_t
   ('Prompt Collective', 'PC',  'AI prompt packs · Gumroad / Stan', '#BA7517', '#F7EDDA', '#7A4D0F', 4);
 
 
+-- ─── Phase 4 additions ───────────────────────────────────────────────────────
+-- Run this block if you applied the initial migration before Phase 4 was built.
+
+alter table campaigns add column if not exists niche text;
+
+
 -- ─── Storage bucket ───────────────────────────────────────────────────────────
 -- Run this separately in the Storage tab, or uncomment if your plan allows SQL storage ops:
 -- insert into storage.buckets (id, name, public) values ('icc-assets', 'icc-assets', false);
