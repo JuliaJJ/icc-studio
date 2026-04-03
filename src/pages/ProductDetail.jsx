@@ -72,6 +72,10 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [imageUrl, setImageUrl] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [linkedAssets, setLinkedAssets] = useState([])
+  const imageInputRef = useRef(null)
 
   useEffect(() => {
     supabase
@@ -97,9 +101,43 @@ export default function ProductDetail() {
           target_launch_date: data?.target_launch_date ?? '',
           last_updated_at: data?.last_updated_at ?? '',
         })
+        // Load signed URL for primary image
+        const path = data?.image_urls?.[0]
+        if (path) {
+          supabase.storage.from('icc-assets').createSignedUrl(path, 3600)
+            .then(({ data: urlData }) => { if (urlData) setImageUrl(urlData.signedUrl) })
+        }
         setLoading(false)
       })
+
+    // Load linked assets
+    supabase
+      .from('asset_product_links')
+      .select('id, assets(id, filename, role)')
+      .eq('product_id', id)
+      .then(({ data }) => setLinkedAssets((data ?? []).map(r => r.assets).filter(Boolean)))
   }, [id])
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingImage(true)
+    const path = `products/${activeBrand.id}/${id}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const { error } = await supabase.storage.from('icc-assets').upload(path, file)
+    if (!error) {
+      await supabase.from('products').update({ image_urls: [path] }).eq('id', id)
+      setProduct(prev => ({ ...prev, image_urls: [path] }))
+      const { data: urlData } = await supabase.storage.from('icc-assets').createSignedUrl(path, 3600)
+      if (urlData) setImageUrl(urlData.signedUrl)
+    }
+    setUploadingImage(false)
+  }
+
+  async function handleImageRemove() {
+    await supabase.from('products').update({ image_urls: [] }).eq('id', id)
+    setProduct(prev => ({ ...prev, image_urls: [] }))
+    setImageUrl(null)
+  }
 
   function setField(field) {
     return (e) => {
@@ -172,11 +210,28 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Image area placeholder */}
-        <div className="product-image-area">
-          <span>{productEmoji(form.product_type)}</span>
-          <span className="product-image-note">Image upload available in a later phase</span>
+        {/* Image area */}
+        <div
+          className="product-image-area"
+          style={{ cursor: imageUrl ? 'default' : 'pointer', padding: 0, overflow: 'hidden' }}
+          onClick={() => { if (!imageUrl) imageInputRef.current?.click() }}
+        >
+          {imageUrl ? (
+            <>
+              <img src={imageUrl} alt={form.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div className="product-image-actions">
+                <button type="button" className="product-image-action-btn" onClick={() => imageInputRef.current?.click()}>Change</button>
+                <button type="button" className="product-image-action-btn" onClick={handleImageRemove}>Remove</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: 28 }}>{productEmoji(form.product_type)}</span>
+              <span className="product-image-note">{uploadingImage ? 'Uploading…' : 'Click to upload image'}</span>
+            </>
+          )}
         </div>
+        <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
 
         {/* Details section */}
         <div className="product-detail-section">
@@ -237,11 +292,18 @@ export default function ProductDetail() {
           <textarea className="form-textarea" rows={3} value={form.notes} onChange={setField('notes')} placeholder="Internal notes…" />
         </div>
 
-        {/* Linked assets placeholder */}
-        <div className="product-detail-section">
-          <div className="product-detail-section-title">Linked assets</div>
-          <div className="product-detail-placeholder-row">Asset linking available in Phase 4</div>
-        </div>
+        {/* Linked assets */}
+        {linkedAssets.length > 0 && (
+          <div className="product-detail-section">
+            <div className="product-detail-section-title">Linked assets</div>
+            {linkedAssets.map(asset => (
+              <div key={asset.id} className="product-linked-asset-row">
+                <span>{asset.role === 'source_file' ? '📁' : asset.role === 'mockup' ? '🖼️' : asset.role === 'listing_image' ? '🏞️' : '🎨'}</span>
+                <span className="product-linked-asset-name">{asset.filename}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Save bar */}
         <div className="product-save-bar">
