@@ -70,17 +70,25 @@ function TagInput({ tags, onChange }) {
 // ─── Prompt Panel (Add / Edit) ────────────────────────────────────────────────
 
 function PromptPanel({ prompt, brandId, onSave, onDelete, onClose }) {
-  const [form, setForm] = useState({
-    title:             prompt?.title             ?? '',
-    platform:          prompt?.platform          ?? 'Midjourney',
-    tags:              prompt?.tags              ?? [],
-    content:           prompt?.content           ?? '',
+  const initialForm = {
+    title:              prompt?.title              ?? '',
+    platform:           prompt?.platform           ?? 'Midjourney',
+    tags:               prompt?.tags               ?? [],
+    content:            prompt?.content            ?? '',
     example_output_url: prompt?.example_output_url ?? '',
-    notes:             prompt?.notes             ?? '',
-  })
+    notes:              prompt?.notes              ?? '',
+  }
+  const [form, setForm] = useState(initialForm)
   const [saving, setSaving] = useState(false)
 
   function set(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
+
+  function confirmClose() {
+    if (JSON.stringify(form) !== JSON.stringify(initialForm)) {
+      if (!window.confirm('Discard unsaved changes?')) return
+    }
+    onClose()
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -106,11 +114,11 @@ function PromptPanel({ prompt, brandId, onSave, onDelete, onClose }) {
 
   return (
     <div className="panel-overlay">
-      <div className="panel-backdrop" onClick={onClose} />
+      <div className="panel-backdrop" onClick={confirmClose} />
       <div className="panel">
         <div className="panel-header">
           <span className="panel-title">{prompt ? 'Edit prompt' : 'New prompt'}</span>
-          <button className="panel-close" onClick={onClose}>×</button>
+          <button className="panel-close" onClick={confirmClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="panel-form">
           <div className="form-field">

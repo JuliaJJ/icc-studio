@@ -2768,6 +2768,202 @@ a {
   line-height: 1.5;
 }
 
+/* ─── Search ────────────────────────────────────────────────────────────── */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-search-btn {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  padding: 4px 6px;
+  border-radius: var(--border-radius-md);
+  line-height: 1;
+  transition: color 80ms ease, background 80ms ease;
+}
+
+.topbar-search-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-background-secondary);
+}
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 400;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+}
+
+.search-modal {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.search-icon {
+  font-size: 18px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  background: transparent;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.search-clear {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color 80ms ease;
+}
+
+.search-clear:hover {
+  color: var(--color-text-primary);
+}
+
+.search-results {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.search-empty {
+  padding: 16px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+.search-group {
+  padding: 8px 0 4px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.search-group:last-child {
+  border-bottom: none;
+}
+
+.search-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-tertiary);
+  padding: 0 16px 4px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  width: 100%;
+  text-align: left;
+  transition: background 80ms ease;
+}
+
+.search-result-item:hover {
+  background: var(--color-background-secondary);
+}
+
+.search-result-name {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ─── Next stage button ─────────────────────────────────────────────────── */
+.btn-next-stage {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 10px;
+  transition: opacity 80ms ease;
+}
+
+.btn-next-stage:hover {
+  opacity: 0.8;
+}
+
+/* ─── Campaign product picker ───────────────────────────────────────────── */
+.campaign-product-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campaign-product-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.campaign-product-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  padding: 2px 8px;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 10px;
+  color: var(--color-text-primary);
+}
+
+.campaign-product-chip button {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  line-height: 1;
+  transition: color 80ms ease;
+}
+
+.campaign-product-chip button:hover {
+  color: var(--color-text-primary);
+}
+
+.campaign-product-count {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
 /* ─── Secondary button ──────────────────────────────────────────────────── */
 .btn-secondary {
   padding: 5px 12px;

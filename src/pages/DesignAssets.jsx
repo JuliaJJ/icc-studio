@@ -148,7 +148,7 @@ function QuickViewCard({ product, onClose }) {
 // ─── Add / Edit Asset Panel ───────────────────────────────────────────────────
 
 function AssetPanel({ asset, brandId, onSave, onDelete, onClose }) {
-  const [form, setForm] = useState({
+  const initialForm = {
     filename:     asset?.filename     ?? '',
     role:         asset?.role         ?? 'source_file',
     source_tool:  asset?.source_tool  ?? '',
@@ -158,13 +158,21 @@ function AssetPanel({ asset, brandId, onSave, onDelete, onClose }) {
     specs:        asset?.specs        ?? '',
     notes:        asset?.notes        ?? '',
     file_url:     asset?.file_url     ?? null,
-  })
+  }
+  const [form, setForm] = useState(initialForm)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
   const fileRef = useRef(null)
 
   function setField(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
+
+  function confirmClose() {
+    if (JSON.stringify(form) !== JSON.stringify(initialForm)) {
+      if (!window.confirm('Discard unsaved changes?')) return
+    }
+    onClose()
+  }
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0]
@@ -212,11 +220,11 @@ function AssetPanel({ asset, brandId, onSave, onDelete, onClose }) {
 
   return (
     <div className="panel-overlay">
-      <div className="panel-backdrop" onClick={onClose} />
+      <div className="panel-backdrop" onClick={confirmClose} />
       <div className="panel">
         <div className="panel-header">
           <span className="panel-title">{asset ? 'Edit asset' : 'New asset'}</span>
-          <button className="panel-close" onClick={onClose}>×</button>
+          <button className="panel-close" onClick={confirmClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="panel-form">
           {/* File upload */}

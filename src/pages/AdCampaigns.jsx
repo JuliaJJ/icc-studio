@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import FilterPills from '../components/FilterPills'
@@ -41,10 +41,80 @@ function fmtDateRange(start, end) {
   return `${s} – ${e}`
 }
 
+// ─── Product picker for campaigns ────────────────────────────────────────────
+
+function ProductPicker({ brandId, selectedIds, onChange }) {
+  const [products, setProducts] = useState([])
+  const [open, setOpen] = useState(false)
+  const [productMap, setProductMap] = useState({})
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    supabase.from('products').select('id, name, niche').eq('brand_id', brandId).order('name')
+      .then(({ data }) => {
+        const list = data ?? []
+        setProducts(list)
+        const map = {}
+        list.forEach(p => { map[p.id] = p })
+        setProductMap(map)
+      })
+  }, [brandId])
+
+  useEffect(() => {
+    function handle(e) { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  const available = products.filter(p => !selectedIds.includes(p.id))
+
+  return (
+    <div className="campaign-product-picker">
+      {selectedIds.length > 0 && (
+        <div className="campaign-product-chips">
+          {selectedIds.map(id => {
+            const p = productMap[id]
+            return p ? (
+              <span key={id} className="campaign-product-chip">
+                {p.name}
+                <button type="button" onClick={() => onChange(selectedIds.filter(x => x !== id))}>×</button>
+              </span>
+            ) : null
+          })}
+        </div>
+      )}
+      <div style={{ position: 'relative' }} ref={dropdownRef}>
+        <button type="button" className="link-another-btn" onClick={() => setOpen(v => !v)}>
+          + Link a product
+        </button>
+        {open && (
+          <div className="link-dropdown">
+            {available.length === 0 ? (
+              <div className="link-dropdown-empty">No more products to link</div>
+            ) : (
+              available.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="link-dropdown-item"
+                  onClick={() => { onChange([...selectedIds, p.id]); setOpen(false) }}
+                >
+                  <span className="link-dropdown-name">{p.name}</span>
+                  {p.niche && <span className="niche-tag" style={{ fontSize: 10 }}>{p.niche}</span>}
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Campaign Panel ───────────────────────────────────────────────────────────
 
 function CampaignPanel({ campaign, brandId, onSave, onDelete, onClose }) {
-  const [form, setForm] = useState({
+  const initialForm = {
     name:         campaign?.name         ?? '',
     platform:     campaign?.platform     ?? 'Pinterest',
     status:       campaign?.status       ?? 'draft',
@@ -57,10 +127,19 @@ function CampaignPanel({ campaign, brandId, onSave, onDelete, onClose }) {
     roas:         campaign?.roas         ?? '',
     niche:        campaign?.niche        ?? '',
     notes:        campaign?.notes        ?? '',
-  })
+    product_ids:  campaign?.product_ids  ?? [],
+  }
+  const [form, setForm] = useState(initialForm)
   const [saving, setSaving] = useState(false)
 
   function set(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
+
+  function confirmClose() {
+    if (JSON.stringify(form) !== JSON.stringify(initialForm)) {
+      if (!window.confirm('Discard unsaved changes?')) return
+    }
+    onClose()
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -88,11 +167,11 @@ function CampaignPanel({ campaign, brandId, onSave, onDelete, onClose }) {
 
   return (
     <div className="panel-overlay">
-      <div className="panel-backdrop" onClick={onClose} />
+      <div className="panel-backdrop" onClick={confirmClose} />
       <div className="panel">
         <div className="panel-header">
           <span className="panel-title">{campaign ? 'Edit campaign' : 'New campaign'}</span>
-          <button className="panel-close" onClick={onClose}>×</button>
+          <button className="panel-close" onClick={confirmClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="panel-form">
           <div className="form-field">
@@ -150,6 +229,14 @@ function CampaignPanel({ campaign, brandId, onSave, onDelete, onClose }) {
               <label className="form-label">Niche</label>
               <input className="form-input" type="text" value={form.niche} onChange={set('niche')} placeholder="e.g. Nurses" />
             </div>
+          </div>
+          <div className="form-field">
+            <label className="form-label">Linked products</label>
+            <ProductPicker
+              brandId={brandId}
+              selectedIds={form.product_ids}
+              onChange={ids => setForm(p => ({ ...p, product_ids: ids }))}
+            />
           </div>
           <div className="form-field">
             <label className="form-label">Notes</label>
@@ -221,12 +308,15 @@ function CampaignCard({ campaign, linkedCreatives, onEdit }) {
       )}
 
       {/* Footer */}
-      {(campaign.niche || campaign.platform) && (
+      {(campaign.niche || campaign.platform || (campaign.product_ids?.length > 0)) && (
         <div className="campaign-card-footer">
           <div className="campaign-footer-tags">
             {campaign.niche && <span className="niche-tag">{campaign.niche}</span>}
             {campaign.platform && <span className="type-tag">{campaign.platform}</span>}
           </div>
+          {campaign.product_ids?.length > 0 && (
+            <span className="campaign-product-count">{campaign.product_ids.length} product{campaign.product_ids.length !== 1 ? 's' : ''}</span>
+          )}
         </div>
       )}
     </div>

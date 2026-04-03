@@ -173,6 +173,15 @@ export default function ProductDetail() {
     navigate('/catalog')
   }
 
+  const NEXT_STATUS = { idea: 'in_progress', in_progress: 'ready', ready: 'live' }
+  async function advanceStage() {
+    const next = NEXT_STATUS[form.status]
+    if (!next) return
+    setForm(p => ({ ...p, status: next }))
+    await supabase.from('products').update({ status: next }).eq('id', id)
+    setSaved(true)
+  }
+
   if (loading || !form) return <div className="loading-state">Loading…</div>
   if (!product) return <div className="loading-state">Product not found.</div>
 
@@ -206,6 +215,19 @@ export default function ProductDetail() {
                 <option key={val} value={val}>{cfg.label}</option>
               ))}
             </select>
+            {NEXT_STATUS[form.status] && (() => {
+              const nextCfg = PRODUCT_STATUS[NEXT_STATUS[form.status]]
+              return (
+                <button
+                  type="button"
+                  className="btn-next-stage"
+                  style={{ background: nextCfg.bg, color: nextCfg.color }}
+                  onClick={advanceStage}
+                >
+                  → {nextCfg.label}
+                </button>
+              )
+            })()}
             <PlatformSelector selected={form.platform} onChange={v => setDirect('platform', v)} />
           </div>
         </div>

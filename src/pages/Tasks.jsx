@@ -41,16 +41,24 @@ function PriorityDot({ priority }) {
 }
 
 function TaskPanel({ task, brandId, onSave, onDelete, onClose }) {
-  const [form, setForm] = useState({
+  const initialForm = {
     title: task?.title ?? '',
     priority: task?.priority ?? 'medium',
     due_date: task?.due_date ?? '',
     notes: task?.notes ?? '',
-  })
+  }
+  const [form, setForm] = useState(initialForm)
   const [saving, setSaving] = useState(false)
 
   function setField(field) {
     return (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
+  }
+
+  function confirmClose() {
+    if (JSON.stringify(form) !== JSON.stringify(initialForm)) {
+      if (!window.confirm('Discard unsaved changes?')) return
+    }
+    onClose()
   }
 
   async function handleSubmit(e) {
@@ -83,11 +91,11 @@ function TaskPanel({ task, brandId, onSave, onDelete, onClose }) {
 
   return (
     <div className="panel-overlay">
-      <div className="panel-backdrop" onClick={onClose} />
+      <div className="panel-backdrop" onClick={confirmClose} />
       <div className="panel">
         <div className="panel-header">
           <span className="panel-title">{task ? 'Edit task' : 'New task'}</span>
-          <button className="panel-close" onClick={onClose}>×</button>
+          <button className="panel-close" onClick={confirmClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="panel-form">
           <div className="form-field">

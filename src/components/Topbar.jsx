@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useBrand } from '../context/BrandContext'
 import BrandSwitcher from './BrandSwitcher'
+import SearchModal from './SearchModal'
 
 const PAGE_TITLES = {
   '/': 'Today',
@@ -19,30 +21,40 @@ const PAGE_TITLES = {
 export default function Topbar() {
   const { activeBrand } = useBrand()
   const location = useLocation()
+  const [searchOpen, setSearchOpen] = useState(false)
   const pageTitle = location.pathname.startsWith('/catalog/')
     ? 'Catalog'
     : PAGE_TITLES[location.pathname] ?? 'ICC Studio'
 
   return (
-    <header className="topbar">
-      <div
-        className="topbar-accent-bar"
-        style={{ backgroundColor: activeBrand.accent_color }}
-      />
-      <div className="topbar-inner">
-        <div className="topbar-left">
-          <span className="brand-badge">
-            <span
-              className="brand-dot"
-              style={{ backgroundColor: activeBrand.accent_color }}
-            />
-            <span className="brand-badge-name">{activeBrand.name}</span>
-          </span>
-          <span className="topbar-divider">·</span>
-          <span className="topbar-page-title">{pageTitle}</span>
+    <>
+      <header className="topbar">
+        <div
+          className="topbar-accent-bar"
+          style={{ backgroundColor: activeBrand.accent_color }}
+        />
+        <div className="topbar-inner">
+          <div className="topbar-left">
+            <span className="brand-badge">
+              <span
+                className="brand-dot"
+                style={{ backgroundColor: activeBrand.accent_color }}
+              />
+              <span className="brand-badge-name">{activeBrand.name}</span>
+            </span>
+            <span className="topbar-divider">·</span>
+            <span className="topbar-page-title">{pageTitle}</span>
+          </div>
+          <div className="topbar-right">
+            <button className="topbar-search-btn" onClick={() => setSearchOpen(true)} title="Search (⌕)">
+              ⌕
+            </button>
+            <BrandSwitcher />
+          </div>
         </div>
-        <BrandSwitcher />
-      </div>
-    </header>
+      </header>
+
+      {searchOpen && <SearchModal onClose={() => setSearchOpen(false)} />}
+    </>
   )
 }

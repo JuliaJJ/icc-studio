@@ -328,6 +328,7 @@ insert into brands (name, short_code, tagline, accent_color, tag_bg_color, tag_t
 -- Run this block if you applied the initial migration before Phase 4 was built.
 
 alter table campaigns add column if not exists niche text;
+alter table campaigns add column if not exists product_ids uuid[] default '{}';
 
 
 -- ─── Storage bucket ───────────────────────────────────────────────────────────
