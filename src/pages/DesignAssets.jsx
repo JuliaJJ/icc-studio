@@ -157,10 +157,36 @@ function AssetPanel({ asset, brandId, onSave, onDelete, onClose }) {
     niche:        asset?.niche        ?? '',
     specs:        asset?.specs        ?? '',
     notes:        asset?.notes        ?? '',
+    file_url:     asset?.file_url     ?? null,
   })
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState(null)
+  const fileRef = useRef(null)
 
   function setField(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    const ext = file.name.split('.').pop()
+    const path = `${brandId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const { error } = await supabase.storage.from('icc-assets').upload(path, file)
+    if (error) {
+      setUploadError(error.message)
+      setUploading(false)
+      return
+    }
+    // Store filename from file if not already set
+    setForm(p => ({
+      ...p,
+      file_url: path,
+      filename: p.filename || file.name,
+    }))
+    setUploading(false)
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -193,9 +219,23 @@ function AssetPanel({ asset, brandId, onSave, onDelete, onClose }) {
           <button className="panel-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="panel-form">
+          {/* File upload */}
+          <div className="form-field">
+            <label className="form-label">File upload</label>
+            <div className="asset-upload-area" onClick={() => fileRef.current?.click()}>
+              {form.file_url ? (
+                <span className="asset-upload-success">✓ File attached</span>
+              ) : (
+                <span className="asset-upload-hint">{uploading ? 'Uploading…' : 'Click to upload a file'}</span>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*,.pdf,.ai,.psd,.svg" style={{ display: 'none' }} onChange={handleFileChange} disabled={uploading} />
+            {uploadError && <span className="asset-upload-error">{uploadError}</span>}
+          </div>
+
           <div className="form-field">
             <label className="form-label">Filename</label>
-            <input className="form-input" type="text" value={form.filename} onChange={setField('filename')} required autoFocus placeholder="e.g. nurse-mug-mockup-01.png" />
+            <input className="form-input" type="text" value={form.filename} onChange={setField('filename')} required autoFocus={!form.file_url} placeholder="e.g. nurse-mug-mockup-01.png" />
           </div>
           <div className="form-field">
             <label className="form-label">Role</label>
@@ -236,7 +276,7 @@ function AssetPanel({ asset, brandId, onSave, onDelete, onClose }) {
           </div>
           <div className="panel-actions">
             {asset && <button type="button" className="btn-danger" onClick={handleDelete}>Delete</button>}
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save asset'}</button>
+            <button type="submit" className="btn-primary" disabled={saving || uploading}>{saving ? 'Saving…' : 'Save asset'}</button>
           </div>
         </form>
       </div>
@@ -287,6 +327,13 @@ function AssetDetail({ asset, onEdit, onLinkedProductClick }) {
   const [notes, setNotes] = useState(asset.notes ?? '')
   const [linkProductOpen, setLinkProductOpen] = useState(false)
   const [savingNotes, setSavingNotes] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(null)
+
+  useEffect(() => {
+    if (!asset.file_url) { setPreviewUrl(null); return }
+    supabase.storage.from('icc-assets').createSignedUrl(asset.file_url, 3600)
+      .then(({ data }) => { if (data) setPreviewUrl(data.signedUrl) })
+  }, [asset.file_url])
 
   useEffect(() => {
     setNotes(asset.notes ?? '')
@@ -333,7 +380,11 @@ function AssetDetail({ asset, onEdit, onLinkedProductClick }) {
     <div className="asset-detail-panel">
       {/* Preview area */}
       <div className="asset-detail-preview">
-        <span className="asset-detail-preview-icon">{assetEmoji(asset.role)}</span>
+        {previewUrl ? (
+          <img src={previewUrl} alt={asset.filename} className="asset-detail-preview-img" />
+        ) : (
+          <span className="asset-detail-preview-icon">{assetEmoji(asset.role)}</span>
+        )}
       </div>
 
       {/* Header */}
