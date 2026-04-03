@@ -2964,6 +2964,207 @@ a {
   flex-shrink: 0;
 }
 
+/* ─── Keyword library picker (product detail) ──────────────────────────── */
+.kw-library-btn {
+  font-size: 11px;
+  color: var(--brand-accent);
+  transition: opacity 80ms ease;
+}
+
+.kw-library-btn:hover {
+  opacity: 0.75;
+}
+
+.kw-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.kw-picker-modal {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  width: 100%;
+  max-width: 420px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.kw-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  flex-shrink: 0;
+}
+
+.kw-picker-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.kw-picker-filters {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  flex-shrink: 0;
+}
+
+.kw-picker-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.kw-picker-empty {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+.kw-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  width: 100%;
+  text-align: left;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  transition: background 80ms ease;
+}
+
+.kw-picker-item:last-child {
+  border-bottom: none;
+}
+
+.kw-picker-item:not(:disabled):hover {
+  background: var(--color-background-secondary);
+}
+
+.kw-picker-item--added {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kw-picker-item-text {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.kw-picker-item-add {
+  font-size: 11px;
+  color: var(--brand-accent);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.kw-picker-item-check {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ─── Keyword harvest panel ─────────────────────────────────────────────── */
+.harvest-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  flex-shrink: 0;
+}
+
+.harvest-count {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.harvest-list {
+  overflow-y: auto;
+  max-height: 400px;
+  flex: 1;
+}
+
+.harvest-empty {
+  padding: 24px 20px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+.harvest-group {
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.harvest-group:last-child {
+  border-bottom: none;
+}
+
+.harvest-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+  padding: 8px 20px 4px;
+  background: var(--color-background-secondary);
+}
+
+.harvest-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 20px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+
+.harvest-item:last-child {
+  border-bottom: none;
+}
+
+.harvest-item:hover {
+  background: var(--color-background-secondary);
+}
+
+.harvest-checkbox {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--brand-accent);
+}
+
+.harvest-keyword {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.harvest-source {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ─── Secondary button ──────────────────────────────────────────────────── */
 .btn-secondary {
   padding: 5px 12px;

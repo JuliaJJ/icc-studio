@@ -2,6 +2,122 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 
+// ─── Harvest Panel ────────────────────────────────────────────────────────────
+
+function HarvestPanel({ brandId, existingKeywords, onImport, onClose }) {
+  const [candidates, setCandidates] = useState([]) // { keyword, niche, productName }
+  const [selected, setSelected] = useState(new Set())
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const [{ data: products }, ] = await Promise.all([
+        supabase.from('products').select('name, niche, keywords').eq('brand_id', brandId),
+      ])
+      const existingSet = new Set(existingKeywords.map(k => k.keyword.toLowerCase()))
+      const seen = new Set()
+      const found = []
+      ;(products ?? []).forEach(p => {
+        ;(p.keywords ?? []).forEach(kw => {
+          const lower = kw.toLowerCase()
+          if (!existingSet.has(lower) && !seen.has(lower)) {
+            seen.add(lower)
+            found.push({ keyword: kw, niche: p.niche ?? '', productName: p.name })
+          }
+        })
+      })
+      found.sort((a, b) => (a.niche ?? '').localeCompare(b.niche ?? '') || a.keyword.localeCompare(b.keyword))
+      setCandidates(found)
+      setSelected(new Set(found.map((_, i) => i)))
+      setLoading(false)
+    }
+    load()
+  }, [brandId])
+
+  function toggleAll() {
+    setSelected(selected.size === candidates.length ? new Set() : new Set(candidates.map((_, i) => i)))
+  }
+
+  function toggle(i) {
+    const next = new Set(selected)
+    next.has(i) ? next.delete(i) : next.add(i)
+    setSelected(next)
+  }
+
+  async function handleImport() {
+    setSaving(true)
+    const toInsert = [...selected].map(i => ({
+      brand_id: brandId,
+      keyword: candidates[i].keyword,
+      niche: candidates[i].niche,
+    }))
+    const { data } = await supabase.from('keywords').insert(toInsert).select()
+    onImport(data ?? [])
+    setSaving(false)
+    onClose()
+  }
+
+  const grouped = {}
+  candidates.forEach((c, i) => {
+    const n = c.niche || '(no niche)'
+    if (!grouped[n]) grouped[n] = []
+    grouped[n].push({ ...c, index: i })
+  })
+
+  return (
+    <div className="panel-overlay">
+      <div className="panel-backdrop" onClick={onClose} />
+      <div className="panel" style={{ width: 380 }}>
+        <div className="panel-header">
+          <span className="panel-title">Harvest from products</span>
+          <button className="panel-close" onClick={onClose}>×</button>
+        </div>
+        <div className="panel-form" style={{ gap: 0, padding: 0 }}>
+          {loading ? (
+            <div className="loading-state">Scanning products…</div>
+          ) : candidates.length === 0 ? (
+            <div className="harvest-empty">All product keywords are already in the library.</div>
+          ) : (
+            <>
+              <div className="harvest-toolbar">
+                <span className="harvest-count">{selected.size} of {candidates.length} selected</span>
+                <button type="button" className="kw-library-btn" onClick={toggleAll}>
+                  {selected.size === candidates.length ? 'Deselect all' : 'Select all'}
+                </button>
+              </div>
+              <div className="harvest-list">
+                {Object.entries(grouped).map(([niche, items]) => (
+                  <div key={niche} className="harvest-group">
+                    <div className="harvest-group-label">{niche}</div>
+                    {items.map(({ keyword, productName, index }) => (
+                      <label key={index} className="harvest-item">
+                        <input
+                          type="checkbox"
+                          className="harvest-checkbox"
+                          checked={selected.has(index)}
+                          onChange={() => toggle(index)}
+                        />
+                        <span className="harvest-keyword">{keyword}</span>
+                        <span className="harvest-source">{productName}</span>
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="panel-actions" style={{ padding: '12px 20px', borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+                <button type="button" className="btn-primary" disabled={saving || selected.size === 0} onClick={handleImport}>
+                  {saving ? 'Importing…' : `Import ${selected.size} keyword${selected.size !== 1 ? 's' : ''}`}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function KeywordItem({ keyword, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(keyword.keyword)
@@ -174,6 +290,7 @@ export default function Keywords() {
   const [keywords, setKeywords] = useState([])
   const [loading, setLoading] = useState(true)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [harvestOpen, setHarvestOpen] = useState(false)
 
   useEffect(() => {
     if (!activeBrand.id) return
@@ -225,7 +342,10 @@ export default function Keywords() {
     <div className="keywords-page">
       <div className="page-header">
         <h1 className="page-title">Keywords</h1>
-        <button className="btn-add" onClick={() => setPanelOpen(true)}>+ Add keyword</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-secondary" onClick={() => setHarvestOpen(true)}>Harvest from products</button>
+          <button className="btn-add" onClick={() => setPanelOpen(true)}>+ Add keyword</button>
+        </div>
       </div>
 
       {keywords.length === 0 ? (
@@ -255,6 +375,15 @@ export default function Keywords() {
           existingNiches={niches}
           onSave={handlePanelSave}
           onClose={() => setPanelOpen(false)}
+        />
+      )}
+
+      {harvestOpen && (
+        <HarvestPanel
+          brandId={activeBrand.id}
+          existingKeywords={keywords}
+          onImport={newKeywords => setKeywords(prev => [...prev, ...newKeywords])}
+          onClose={() => setHarvestOpen(false)}
         />
       )}
     </div>

@@ -39,6 +39,85 @@ function KeywordInput({ keywords, onChange }) {
   )
 }
 
+function KeywordLibraryPicker({ brandId, productNiche, currentKeywords, onAdd, onClose }) {
+  const [libraryKeywords, setLibraryKeywords] = useState([])
+  const [nicheFilter, setNicheFilter] = useState(productNiche ?? 'all')
+
+  useEffect(() => {
+    supabase
+      .from('keywords')
+      .select('id, keyword, niche')
+      .eq('brand_id', brandId)
+      .order('niche')
+      .order('keyword')
+      .then(({ data }) => setLibraryKeywords(data ?? []))
+  }, [brandId])
+
+  useEffect(() => {
+    function handle(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handle)
+    return () => document.removeEventListener('keydown', handle)
+  }, [onClose])
+
+  const niches = [...new Set(libraryKeywords.map(k => k.niche).filter(Boolean))]
+  const filtered = nicheFilter === 'all'
+    ? libraryKeywords
+    : libraryKeywords.filter(k => k.niche === nicheFilter)
+
+  const currentSet = new Set(currentKeywords.map(k => k.toLowerCase()))
+
+  return (
+    <div className="kw-picker-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="kw-picker-modal">
+        <div className="kw-picker-header">
+          <span className="kw-picker-title">Keyword library</span>
+          <button className="panel-close" onClick={onClose}>×</button>
+        </div>
+
+        {niches.length > 1 && (
+          <div className="kw-picker-filters">
+            <button
+              className={`filter-pill ${nicheFilter === 'all' ? 'filter-pill--active' : ''}`}
+              onClick={() => setNicheFilter('all')}
+            >All</button>
+            {niches.map(n => (
+              <button
+                key={n}
+                className={`filter-pill ${nicheFilter === n ? 'filter-pill--active' : ''}`}
+                onClick={() => setNicheFilter(n)}
+              >{n}</button>
+            ))}
+          </div>
+        )}
+
+        <div className="kw-picker-list">
+          {filtered.length === 0 ? (
+            <div className="kw-picker-empty">No keywords in library{nicheFilter !== 'all' ? ` for ${nicheFilter}` : ''}</div>
+          ) : (
+            filtered.map(kw => {
+              const already = currentSet.has(kw.keyword.toLowerCase())
+              return (
+                <button
+                  key={kw.id}
+                  className={`kw-picker-item ${already ? 'kw-picker-item--added' : ''}`}
+                  onClick={() => { if (!already) onAdd(kw.keyword) }}
+                  disabled={already}
+                >
+                  <span className="kw-picker-item-text">{kw.keyword}</span>
+                  {already
+                    ? <span className="kw-picker-item-check">✓</span>
+                    : <span className="kw-picker-item-add">+ Add</span>
+                  }
+                </button>
+              )
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PlatformSelector({ selected, onChange }) {
   function toggle(platform) {
     if (selected.includes(platform)) {
@@ -75,6 +154,7 @@ export default function ProductDetail() {
   const [imageUrl, setImageUrl] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [linkedAssets, setLinkedAssets] = useState([])
+  const [libraryPickerOpen, setLibraryPickerOpen] = useState(false)
   const imageInputRef = useRef(null)
 
   useEffect(() => {
@@ -298,7 +378,12 @@ export default function ProductDetail() {
 
         {/* Keywords */}
         <div className="product-detail-section">
-          <div className="product-detail-section-title">Keywords</div>
+          <div className="product-detail-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Keywords</span>
+            <button type="button" className="kw-library-btn" onClick={() => setLibraryPickerOpen(true)}>
+              Browse library →
+            </button>
+          </div>
           <KeywordInput keywords={form.keywords} onChange={v => setDirect('keywords', v)} />
         </div>
 
@@ -338,6 +423,18 @@ export default function ProductDetail() {
           </div>
         </div>
       </form>
+
+      {libraryPickerOpen && (
+        <KeywordLibraryPicker
+          brandId={activeBrand.id}
+          productNiche={form.niche}
+          currentKeywords={form.keywords}
+          onAdd={kw => {
+            if (!form.keywords.includes(kw)) setDirect('keywords', [...form.keywords, kw])
+          }}
+          onClose={() => setLibraryPickerOpen(false)}
+        />
+      )}
     </div>
   )
 }
