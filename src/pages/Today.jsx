@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
+import TaskPanel from '../components/TaskPanel'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
@@ -66,6 +67,8 @@ export default function Today() {
   })
   const [tasks, setTasks] = useState([])
   const [launches, setLaunches] = useState([])
+  const [editingTask, setEditingTask] = useState(null)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   useEffect(() => {
     if (!activeBrand.id) return
@@ -119,6 +122,16 @@ export default function Today() {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
   }
 
+  function handleSave(saved, mode) {
+    setTasks(prev =>
+      mode === 'insert' ? [...prev, saved] : prev.map(t => t.id === saved.id ? saved : t)
+    )
+  }
+
+  function handleDelete(id) {
+    setTasks(prev => prev.filter(t => t.id !== id))
+  }
+
   const quickLinks = activeBrand.quick_links ?? []
 
   const revenueSubLine = metrics.revenueChange !== null
@@ -168,7 +181,8 @@ export default function Today() {
               tasks.map(task => (
                 <div key={task.id} className="task-row">
                   <TaskCheckbox checked={task.status === 'done'} onChange={() => toggleTask(task)} />
-                  <div className="task-row-content">
+                  <div className="task-row-content" style={{ cursor: 'pointer' }}
+                    onClick={() => { setEditingTask(task); setPanelOpen(true) }}>
                     <span className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
                       {task.title}
                     </span>
@@ -230,6 +244,16 @@ export default function Today() {
           </div>
         </div>
       </div>
+
+      {panelOpen && (
+        <TaskPanel
+          task={editingTask}
+          brandId={activeBrand.id}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          onClose={() => setPanelOpen(false)}
+        />
+      )}
     </div>
   )
 }
