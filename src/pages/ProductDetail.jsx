@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import { PRODUCT_STATUS, productEmoji, PLATFORMS, NICHES, PRODUCT_TIERS, FULFILLMENT_OPTIONS } from '../lib/constants'
+import { PRODUCT_STATUS, productEmoji, NICHES, PRODUCT_TIERS, FULFILLMENT_OPTIONS } from '../lib/constants'
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
@@ -207,21 +207,6 @@ function KeywordInput({ keywords, onChange }) {
 
 // ─── Platform selector ────────────────────────────────────────────────────────
 
-function PlatformSelector({ selected, onChange }) {
-  function toggle(p) {
-    onChange(selected.includes(p) ? selected.filter(x => x !== p) : [...selected, p])
-  }
-  return (
-    <div className="platform-selector">
-      {PLATFORMS.map(p => (
-        <button key={p} type="button"
-          className={`platform-tag ${selected.includes(p) ? 'platform-tag--active' : ''}`}
-          onClick={() => toggle(p)}
-        >{p}</button>
-      ))}
-    </div>
-  )
-}
 
 // ─── Keyword library picker ───────────────────────────────────────────────────
 
@@ -654,7 +639,6 @@ export default function ProductDetail() {
           formats:            data?.formats            ?? [],
           sizes:              data?.sizes              ?? [],
           fulfillment:        data?.fulfillment        ?? '',
-          platform:           data?.platform           ?? [],
           price:              data?.price              ?? '',
           sku:                data?.sku                ?? '',
           description:        data?.description        ?? '',
@@ -836,7 +820,6 @@ export default function ProductDetail() {
                 >→ {nextCfg.label}</button>
               )
             })()}
-            <PlatformSelector selected={form.platform} onChange={v => setDirect('platform', v)} />
           </div>
         </div>
 
