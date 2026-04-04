@@ -1255,6 +1255,37 @@ a {
   white-space: nowrap;
 }
 
+/* ─── Task label filter row ─────────────────────────────────────────────── */
+.task-label-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+
+.task-label-filter-pill {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 0.5px solid var(--color-border-secondary);
+  color: var(--color-text-secondary);
+  background: transparent;
+  transition: border-color 80ms, color 80ms, background 80ms;
+}
+
+.task-label-filter-pill:hover {
+  border-color: var(--color-text-tertiary);
+  color: var(--color-text-primary);
+}
+
+.task-label-filter-pill--active {
+  background: var(--brand-tag-bg);
+  color: var(--brand-tag-text);
+  border-color: transparent;
+}
+
 /* ─── Catalog grid ──────────────────────────────────────────────────── */
 .catalog-grid {
   display: grid;

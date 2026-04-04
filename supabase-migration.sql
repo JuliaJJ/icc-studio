@@ -369,7 +369,8 @@ create policy "Authenticated users can manage value_library"
   to authenticated using (true) with check (true);
 
 
-alter table tasks add column if not exists label text;
+alter table tasks drop column if exists label;
+alter table tasks add column if not exists labels text[] default '{}';
 
 alter table campaigns add column if not exists niche text;
 alter table campaigns add column if not exists product_ids uuid[] default '{}';

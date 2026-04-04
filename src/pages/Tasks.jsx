@@ -6,6 +6,12 @@ import FilterPills from '../components/FilterPills'
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
 
+const PRIORITY_FILTERS = [
+  { value: 'all',   label: 'All' },
+  { value: 'today', label: 'Today' },
+  { value: 'high',  label: 'High priority' },
+]
+
 function formatDueDate(date) {
   if (!date) return null
   if (date === TODAY) return 'Today'
@@ -34,10 +40,12 @@ function PriorityDot({ priority }) {
   return <span className={`priority-dot priority-dot--${priority}`} />
 }
 
-// ─── Label input with datalist autocomplete from value_library ────────────────
+// ─── Multi-label tag input with library autocomplete ─────────────────────────
 
-function LabelInput({ value, onChange, brandId }) {
+function LabelTagInput({ values, onChange, brandId }) {
+  const [input, setInput] = useState('')
   const [suggestions, setSuggestions] = useState([])
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!brandId) return
@@ -46,29 +54,54 @@ function LabelInput({ value, onChange, brandId }) {
       .then(({ data }) => setSuggestions((data ?? []).map(r => r.value)))
   }, [brandId])
 
-  async function handleBlur() {
-    const t = value.trim()
-    if (!t) return
+  async function add(val) {
+    const t = val.trim()
+    if (!t || values.includes(t)) { setInput(''); return }
+    onChange([...values, t])
+    setInput('')
     await supabase.from('value_library')
       .upsert({ brand_id: brandId, type: 'task_label', value: t }, { onConflict: 'brand_id,type,value' })
     setSuggestions(prev => [...new Set([...prev, t])].sort())
   }
 
+  function handleKeyDown(e) {
+    if ((e.key === 'Enter' || e.key === ',') && input.trim()) { e.preventDefault(); add(input) }
+    if (e.key === 'Backspace' && !input && values.length > 0) onChange(values.slice(0, -1))
+    if (e.key === 'Escape') setOpen(false)
+  }
+
+  const filtered = suggestions.filter(s => !values.includes(s) && s.toLowerCase().includes(input.toLowerCase()))
+
   return (
-    <>
-      <input
-        className="form-input"
-        type="text"
-        list="task-label-suggestions"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onBlur={handleBlur}
-        placeholder="e.g. Content, Design, Admin"
-      />
-      <datalist id="task-label-suggestions">
-        {suggestions.map(s => <option key={s} value={s} />)}
-      </datalist>
-    </>
+    <div className="library-input-wrap">
+      <div className="tag-input-wrapper">
+        {values.map((v, i) => (
+          <span key={i} className="keyword-tag">
+            {v}
+            <button type="button" className="keyword-tag-remove"
+              onClick={() => onChange(values.filter((_, j) => j !== i))}>×</button>
+          </span>
+        ))}
+        <input
+          className="tag-input"
+          type="text"
+          value={input}
+          onChange={e => { setInput(e.target.value); setOpen(true) }}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder={values.length === 0 ? 'Type label + Enter' : ''}
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="library-suggestions">
+          {filtered.map(s => (
+            <button key={s} type="button" className="library-suggestion-item"
+              onMouseDown={() => add(s)}>{s}</button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -79,7 +112,7 @@ function TaskPanel({ task, brandId, onSave, onDelete, onClose }) {
     title:    task?.title    ?? '',
     priority: task?.priority ?? 'medium',
     due_date: task?.due_date ?? '',
-    label:    task?.label    ?? '',
+    labels:   task?.labels   ?? [],
     notes:    task?.notes    ?? '',
   }
   const [form, setForm] = useState(initialForm)
@@ -103,7 +136,7 @@ function TaskPanel({ task, brandId, onSave, onDelete, onClose }) {
       title:    form.title,
       priority: form.priority,
       due_date: form.due_date || null,
-      label:    form.label.trim() || null,
+      labels:   form.labels,
       notes:    form.notes || null,
       brand_id: brandId,
     }
@@ -136,18 +169,16 @@ function TaskPanel({ task, brandId, onSave, onDelete, onClose }) {
         <form onSubmit={handleSubmit} className="panel-form">
           <div className="form-field">
             <label className="form-label">Title</label>
-            <input
-              className="form-input"
-              type="text"
-              value={form.title}
-              onChange={setField('title')}
-              required
-              autoFocus
-            />
+            <input className="form-input" type="text" value={form.title}
+              onChange={setField('title')} required autoFocus />
           </div>
           <div className="form-field">
-            <label className="form-label">Label</label>
-            <LabelInput value={form.label} onChange={v => setForm(p => ({ ...p, label: v }))} brandId={brandId} />
+            <label className="form-label">Labels</label>
+            <LabelTagInput
+              values={form.labels}
+              onChange={v => setForm(p => ({ ...p, labels: v }))}
+              brandId={brandId}
+            />
           </div>
           <div className="form-field">
             <label className="form-label">Priority</label>
@@ -159,27 +190,17 @@ function TaskPanel({ task, brandId, onSave, onDelete, onClose }) {
           </div>
           <div className="form-field">
             <label className="form-label">Due date</label>
-            <input
-              className="form-input"
-              type="date"
-              value={form.due_date}
-              onChange={setField('due_date')}
-            />
+            <input className="form-input" type="date" value={form.due_date}
+              onChange={setField('due_date')} />
           </div>
           <div className="form-field">
             <label className="form-label">Notes</label>
-            <textarea
-              className="form-textarea"
-              rows={3}
-              value={form.notes}
-              onChange={setField('notes')}
-            />
+            <textarea className="form-textarea" rows={3} value={form.notes}
+              onChange={setField('notes')} />
           </div>
           <div className="panel-actions">
             {task && (
-              <button type="button" className="btn-danger" onClick={handleDelete}>
-                Delete
-              </button>
+              <button type="button" className="btn-danger" onClick={handleDelete}>Delete</button>
             )}
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving ? 'Saving…' : 'Save task'}
@@ -195,24 +216,17 @@ function TaskPanel({ task, brandId, onSave, onDelete, onClose }) {
 
 export default function Tasks() {
   const { activeBrand } = useBrand()
-  const [tasks, setTasks]       = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState('all')
+  const [tasks, setTasks]         = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState('all')
   const [panelOpen, setPanelOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
 
   useEffect(() => {
     if (!activeBrand.id) return
     setLoading(true)
-    supabase
-      .from('tasks')
-      .select('*')
-      .eq('brand_id', activeBrand.id)
-      .order('created_at')
-      .then(({ data }) => {
-        setTasks(data ?? [])
-        setLoading(false)
-      })
+    supabase.from('tasks').select('*').eq('brand_id', activeBrand.id).order('created_at')
+      .then(({ data }) => { setTasks(data ?? []); setLoading(false) })
   }, [activeBrand.id])
 
   async function toggleTask(task) {
@@ -227,40 +241,31 @@ export default function Tasks() {
     )
   }
 
-  function handleDelete(id) {
-    setTasks(prev => prev.filter(t => t.id !== id))
-  }
+  function handleDelete(id) { setTasks(prev => prev.filter(t => t.id !== id)) }
+  function openAdd()         { setEditingTask(null); setPanelOpen(true) }
+  function openEdit(task)    { setEditingTask(task); setPanelOpen(true) }
 
-  function openAdd()       { setEditingTask(null);  setPanelOpen(true) }
-  function openEdit(task)  { setEditingTask(task);  setPanelOpen(true) }
+  // Unique labels across all tasks for this brand
+  const allLabels = [...new Set(tasks.flatMap(t => t.labels ?? []))].sort()
 
-  // Build filter options dynamically from labels present in loaded tasks
-  const activeLabels = [...new Set(tasks.map(t => t.label).filter(Boolean))].sort()
-  const filterOptions = [
-    { value: 'all',   label: 'All' },
-    { value: 'today', label: 'Today' },
-    { value: 'high',  label: 'High priority' },
-    ...activeLabels.map(l => ({ value: `label:${l}`, label: l })),
-  ]
+  const activeLabel = filter.startsWith('label:') ? filter.slice(6) : null
+
+  // Reset label filter if that label no longer exists in any task
+  useEffect(() => {
+    if (activeLabel && !allLabels.includes(activeLabel)) setFilter('all')
+  }, [allLabels.join(',')])
 
   const filtered = tasks
     .filter(task => {
-      if (filter === 'today')          return task.due_date === TODAY && task.status === 'open'
-      if (filter === 'high')           return task.priority === 'high' && task.status === 'open'
-      if (filter.startsWith('label:')) return task.label === filter.slice(6)
+      if (filter === 'today')  return task.due_date === TODAY && task.status === 'open'
+      if (filter === 'high')   return task.priority === 'high' && task.status === 'open'
+      if (activeLabel)         return (task.labels ?? []).includes(activeLabel)
       return true
     })
     .sort((a, b) => {
       if (a.status !== b.status) return a.status === 'open' ? -1 : 1
       return (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
     })
-
-  // Reset filter if the active label disappears (e.g. after editing all tasks with that label)
-  useEffect(() => {
-    if (filter.startsWith('label:') && !activeLabels.includes(filter.slice(6))) {
-      setFilter('all')
-    }
-  }, [activeLabels.join(',')])
 
   return (
     <div className="tasks-page">
@@ -269,7 +274,21 @@ export default function Tasks() {
         <button className="btn-add" onClick={openAdd}>+ Add task</button>
       </div>
 
-      <FilterPills options={filterOptions} active={filter} onChange={setFilter} />
+      <FilterPills options={PRIORITY_FILTERS} active={filter} onChange={setFilter} />
+
+      {allLabels.length > 0 && (
+        <div className="task-label-filters">
+          {allLabels.map(l => (
+            <button
+              key={l}
+              className={`task-label-filter-pill ${activeLabel === l ? 'task-label-filter-pill--active' : ''}`}
+              onClick={() => setFilter(activeLabel === l ? 'all' : `label:${l}`)}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="loading-state">Loading…</div>
@@ -279,25 +298,21 @@ export default function Tasks() {
           <span className="empty-text">
             {filter === 'all' ? 'No tasks yet' : 'No tasks match this filter'}
           </span>
-          {filter === 'all' && (
-            <button className="btn-add" onClick={openAdd}>+ Add task</button>
-          )}
+          {filter === 'all' && <button className="btn-add" onClick={openAdd}>+ Add task</button>}
         </div>
       ) : (
         <div className="task-list">
           {filtered.map(task => (
             <div key={task.id} className="task-card-row">
-              <TaskCheckbox
-                checked={task.status === 'done'}
-                onChange={() => toggleTask(task)}
-              />
+              <TaskCheckbox checked={task.status === 'done'} onChange={() => toggleTask(task)} />
               <div className="task-card-content" onClick={() => openEdit(task)}>
                 <div className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
                   {task.title}
                 </div>
                 <div className="task-meta">
-                  {task.label && <span className="task-label-tag">{task.label}</span>}
-                  <span className="brand-tag">{activeBrand.short_code}</span>
+                  {(task.labels ?? []).map(l => (
+                    <span key={l} className="task-label-tag">{l}</span>
+                  ))}
                   <PriorityDot priority={task.priority} />
                   {task.due_date && (
                     <span className="task-due">{formatDueDate(task.due_date)}</span>
