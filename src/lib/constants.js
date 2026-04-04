@@ -55,4 +55,9 @@ export const NICHES = [
 
 export const PLATFORMS = ['Etsy', 'Printify', 'KDP', 'Gumroad', 'Stan Store', 'Kittl']
 
-export const LAUNCH_STATUS_OPTIONS = ['planned', 'ready', 'soon', 'live', 'ended']
+export const EVENT_TYPES = {
+  holiday:  { label: 'Holiday',  bg: '#EDE9FB', color: '#4C2F9E' },
+  launch:   { label: 'Launch',   bg: '#EAF3DE', color: '#27500A' },
+  campaign: { label: 'Campaign', bg: '#E6F1FB', color: '#0C447C' },
+  other:    { label: 'Other',    bg: '#F1EFE8', color: '#444441' },
+}

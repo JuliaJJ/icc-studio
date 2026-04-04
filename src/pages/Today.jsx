@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
+import { EVENT_TYPES } from '../lib/constants'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
@@ -24,11 +25,8 @@ function formatLaunchDate(dateStr) {
 }
 
 function getLaunchBadge(event) {
-  if (event.status === 'ready') return { label: 'Ready', cls: 'badge--ready' }
-  if (event.status === 'live') return { label: 'Live', cls: 'badge--live' }
-  const daysUntil = Math.ceil((new Date(event.launch_date) - new Date()) / 86400000)
-  if (daysUntil <= 30) return { label: 'Soon', cls: 'badge--soon' }
-  return { label: 'Planned', cls: 'badge--planned' }
+  const cfg = EVENT_TYPES[event.event_type] ?? EVENT_TYPES.other
+  return { label: cfg.label, style: { background: cfg.bg, color: cfg.color, borderColor: 'transparent' } }
 }
 
 function TaskCheckbox({ checked, onChange }) {
@@ -86,7 +84,7 @@ export default function Today() {
       supabase.from('tasks').select('*').eq('brand_id', activeBrand.id).eq('status', 'open'),
       supabase.from('revenue_entries').select('month, year, amount').eq('brand_id', activeBrand.id),
       supabase.from('launch_events').select('*').eq('brand_id', activeBrand.id)
-        .gte('launch_date', TODAY).order('launch_date').limit(5),
+        .gte('start_date', TODAY).order('start_date').limit(5),
     ])
 
     const live = (products ?? []).filter(p => p.status === 'live')
@@ -202,9 +200,9 @@ export default function Today() {
                     <div key={event.id} className="launch-row">
                       <div className="launch-row-main">
                         <span className="launch-name">{event.name}</span>
-                        <span className="launch-date">{formatLaunchDate(event.launch_date)}</span>
+                        <span className="launch-date">{formatLaunchDate(event.start_date)}</span>
                       </div>
-                      <span className={`badge ${badge.cls}`}>{badge.label}</span>
+                      <span className="badge" style={badge.style}>{badge.label}</span>
                     </div>
                   )
                 })

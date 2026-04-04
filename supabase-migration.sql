@@ -406,3 +406,20 @@ create policy "Authenticated users can manage product_assets"
 -- ─── Storage bucket ───────────────────────────────────────────────────────────
 -- Run this separately in the Storage tab, or uncomment if your plan allows SQL storage ops:
 -- insert into storage.buckets (id, name, public) values ('icc-assets', 'icc-assets', false);
+
+
+-- ─── Calendar / launch_events refactor ───────────────────────────────────────
+-- Replaces the old status field (planned/ready/soon/live/ended) with
+-- event_type (holiday/launch/campaign/other) and renames launch_date → start_date.
+
+alter table launch_events add column if not exists event_type text not null default 'other';
+alter table launch_events add column if not exists start_date date;
+
+-- Copy existing launch_date values into start_date
+update launch_events set start_date = launch_date where start_date is null;
+
+-- Make start_date not null now that it's populated
+alter table launch_events alter column start_date set not null;
+
+-- Drop the old check constraint on status so existing rows aren't blocked
+alter table launch_events drop constraint if exists launch_events_status_check;
