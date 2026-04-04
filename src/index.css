@@ -1619,7 +1619,7 @@ a {
 }
 
 .cal-day-cell {
-  min-height: 40px;
+  min-height: 52px;
   padding: 7px 8px 4px;
   border-left: 0.5px solid var(--color-border-tertiary);
   cursor: pointer;
@@ -1657,8 +1657,9 @@ a {
 .cal-event-layer {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  padding: 1px 0 6px;
+  padding: 1px 0 8px;
   row-gap: 2px;
+  min-height: 28px;
 }
 
 .cal-event-bar {

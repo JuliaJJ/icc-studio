@@ -105,37 +105,35 @@ function WeekRow({ weekDays, events, onDayClick, onEventClick }) {
         })}
       </div>
 
-      {rowCount > 0 && (
-        <div className="cal-event-layer" style={{ gridTemplateRows: `repeat(${rowCount}, auto)` }}>
-          {placed.map(event => {
-            const st = STATUS_STYLE[eventStatus(event)] ?? STATUS_STYLE.planned
-            const startsHere = event.launch_date >= weekStart
-            const endsHere   = (event.end_date ?? event.launch_date) <= weekEnd
-            const cls = [
-              'cal-event-bar',
-              startsHere ? 'cal-event-bar--start' : '',
-              endsHere   ? 'cal-event-bar--end'   : '',
-            ].filter(Boolean).join(' ')
+      <div className="cal-event-layer" style={{ gridTemplateRows: rowCount > 0 ? `repeat(${rowCount}, auto)` : undefined }}>
+        {placed.map(event => {
+          const st = STATUS_STYLE[eventStatus(event)] ?? STATUS_STYLE.planned
+          const startsHere = event.launch_date >= weekStart
+          const endsHere   = (event.end_date ?? event.launch_date) <= weekEnd
+          const cls = [
+            'cal-event-bar',
+            startsHere ? 'cal-event-bar--start' : '',
+            endsHere   ? 'cal-event-bar--end'   : '',
+          ].filter(Boolean).join(' ')
 
-            return (
-              <div
-                key={event.id + weekStart}
-                className={cls}
-                style={{
-                  gridColumn: `${event.startCol + 1} / ${event.endCol + 2}`,
-                  gridRow: event.row + 1,
-                  background: st.bg,
-                  color: st.color,
-                }}
-                onClick={e => { e.stopPropagation(); onEventClick(event) }}
-                title={event.name}
-              >
-                {startsHere ? event.name : ''}
-              </div>
-            )
-          })}
-        </div>
-      )}
+          return (
+            <div
+              key={event.id + weekStart}
+              className={cls}
+              style={{
+                gridColumn: `${event.startCol + 1} / ${event.endCol + 2}`,
+                gridRow: event.row + 1,
+                background: st.bg,
+                color: st.color,
+              }}
+              onClick={e => { e.stopPropagation(); onEventClick(event) }}
+              title={event.name}
+            >
+              {event.name}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
