@@ -16,7 +16,7 @@ function StatusBadge({ status }) {
 }
 
 function AddProductPanel({ brandId, onSave, onClose }) {
-  const [form, setForm] = useState({ name: '', niche: '', product_type: '', status: 'idea' })
+  const [form, setForm] = useState({ name: '', niche: '', status: 'idea', is_bundle: false })
   const [saving, setSaving] = useState(false)
 
   function setField(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
@@ -54,10 +54,6 @@ function AddProductPanel({ brandId, onSave, onClose }) {
             </select>
           </div>
           <div className="form-field">
-            <label className="form-label">Product type</label>
-            <input className="form-input" type="text" value={form.product_type} onChange={setField('product_type')} placeholder="e.g. Apparel, Wall art, Journal" />
-          </div>
-          <div className="form-field">
             <label className="form-label">Status</label>
             <select className="form-select" value={form.status} onChange={setField('status')}>
               <option value="idea">Idea</option>
@@ -66,6 +62,17 @@ function AddProductPanel({ brandId, onSave, onClose }) {
               <option value="live">Live</option>
               <option value="paused">Paused</option>
             </select>
+          </div>
+          <div className="form-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              id="is_bundle"
+              checked={form.is_bundle}
+              onChange={e => setForm(p => ({ ...p, is_bundle: e.target.checked }))}
+            />
+            <label htmlFor="is_bundle" className="form-label" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, fontSize: 13 }}>
+              This is a bundle product
+            </label>
           </div>
           <div className="panel-actions">
             <button type="submit" className="btn-primary" disabled={saving}>
@@ -91,7 +98,7 @@ export default function Catalog() {
     setLoading(true)
     supabase
       .from('products')
-      .select('id, name, niche, product_type, status, image_urls')
+      .select('id, name, niche, status, image_urls, is_bundle')
       .eq('brand_id', activeBrand.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -143,6 +150,7 @@ export default function Catalog() {
                 <div className="product-card-name">{product.name}</div>
                 <div className="product-card-meta">
                   {product.niche && <span className="niche-tag">{product.niche}</span>}
+                  {product.is_bundle && <span className="bundle-badge">Bundle</span>}
                   <StatusBadge status={product.status} />
                 </div>
               </div>

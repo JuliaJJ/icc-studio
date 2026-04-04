@@ -327,6 +327,48 @@ insert into brands (name, short_code, tagline, accent_color, tag_bg_color, tag_t
 -- ─── Phase 4 additions ───────────────────────────────────────────────────────
 -- Run this block if you applied the initial migration before Phase 4 was built.
 
+-- ─── Phase 6 additions ───────────────────────────────────────────────────────
+
+alter table products add column if not exists tier text;
+alter table products add column if not exists theme text;
+alter table products add column if not exists palette text;
+alter table products add column if not exists formats text[] default '{}';
+alter table products add column if not exists sizes text[] default '{}';
+alter table products add column if not exists fulfillment text;
+alter table products add column if not exists is_bundle boolean default false;
+
+-- Products contained in a bundle
+create table if not exists bundle_members (
+  id         uuid primary key default gen_random_uuid(),
+  bundle_id  uuid not null references products(id) on delete cascade,
+  product_id uuid not null references products(id) on delete cascade,
+  sort_order integer default 0,
+  unique(bundle_id, product_id)
+);
+
+alter table bundle_members enable row level security;
+
+create policy "Authenticated users can manage bundle_members"
+  on bundle_members for all
+  to authenticated using (true) with check (true);
+
+-- Reusable value libraries per brand: formats, sizes, shop sections
+create table if not exists value_library (
+  id         uuid primary key default gen_random_uuid(),
+  brand_id   uuid not null references brands(id) on delete cascade,
+  type       text not null,   -- 'format' | 'size' | 'shop_section'
+  value      text not null,
+  created_at timestamptz not null default now(),
+  unique(brand_id, type, value)
+);
+
+alter table value_library enable row level security;
+
+create policy "Authenticated users can manage value_library"
+  on value_library for all
+  to authenticated using (true) with check (true);
+
+
 alter table campaigns add column if not exists niche text;
 alter table campaigns add column if not exists product_ids uuid[] default '{}';
 alter table brands add column if not exists platform_tabs text[] default '{"Etsy","Pinterest","Social"}';

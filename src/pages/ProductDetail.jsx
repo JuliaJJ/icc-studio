@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import { PRODUCT_STATUS, productEmoji, PLATFORMS, NICHES } from '../lib/constants'
+import { PRODUCT_STATUS, productEmoji, PLATFORMS, NICHES, PRODUCT_TIERS, FULFILLMENT_OPTIONS } from '../lib/constants'
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
@@ -279,6 +279,232 @@ function KeywordLibraryPicker({ brandId, productNiche, currentKeywords, onAdd, o
   )
 }
 
+// ─── Library tag input (saves new values to value_library) ───────────────────
+
+function LibraryTagInput({ values, onChange, brandId, type, placeholder }) {
+  const [input, setInput] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!brandId) return
+    supabase.from('value_library').select('value').eq('brand_id', brandId).eq('type', type).order('value')
+      .then(({ data }) => setSuggestions((data ?? []).map(r => r.value)))
+  }, [brandId, type])
+
+  async function add(val) {
+    const t = val.trim()
+    if (!t || values.includes(t)) { setInput(''); return }
+    onChange([...values, t])
+    setInput('')
+    await supabase.from('value_library')
+      .upsert({ brand_id: brandId, type, value: t }, { onConflict: 'brand_id,type,value' })
+    setSuggestions(prev => [...new Set([...prev, t])].sort())
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && input.trim()) { e.preventDefault(); add(input) }
+    if (e.key === 'Backspace' && !input && values.length > 0) onChange(values.slice(0, -1))
+    if (e.key === 'Escape') setOpen(false)
+  }
+
+  const filtered = suggestions.filter(s => !values.includes(s) && s.toLowerCase().includes(input.toLowerCase()))
+
+  return (
+    <div className="library-input-wrap">
+      <div className="tag-input-wrapper">
+        {values.map((v, i) => (
+          <span key={i} className="keyword-tag">
+            {v}
+            <button type="button" className="keyword-tag-remove" onClick={() => onChange(values.filter((_, j) => j !== i))}>×</button>
+          </span>
+        ))}
+        <input
+          className="tag-input"
+          type="text"
+          value={input}
+          onChange={e => { setInput(e.target.value); setOpen(true) }}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder={values.length === 0 ? placeholder : ''}
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="library-suggestions">
+          {filtered.map(s => (
+            <button key={s} type="button" className="library-suggestion-item" onMouseDown={() => add(s)}>{s}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Library single input (saves new value to value_library on blur) ──────────
+
+function LibrarySingleInput({ value, onChange, brandId, type, placeholder }) {
+  const [suggestions, setSuggestions] = useState([])
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!brandId) return
+    supabase.from('value_library').select('value').eq('brand_id', brandId).eq('type', type).order('value')
+      .then(({ data }) => setSuggestions((data ?? []).map(r => r.value)))
+  }, [brandId, type])
+
+  async function saveToLibrary(val) {
+    const t = val.trim()
+    if (!t) return
+    await supabase.from('value_library')
+      .upsert({ brand_id: brandId, type, value: t }, { onConflict: 'brand_id,type,value' })
+    setSuggestions(prev => [...new Set([...prev, t])].sort())
+  }
+
+  const filtered = suggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()) && s !== value)
+
+  return (
+    <div className="library-input-wrap">
+      <input
+        className="form-input"
+        type="text"
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => { setTimeout(() => setOpen(false), 150); saveToLibrary(value) }}
+        placeholder={placeholder}
+      />
+      {open && filtered.length > 0 && (
+        <div className="library-suggestions">
+          {filtered.map(s => (
+            <button key={s} type="button" className="library-suggestion-item"
+              onMouseDown={() => { onChange(s); setOpen(false) }}>{s}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Bundle membership section ────────────────────────────────────────────────
+
+function BundleSection({ productId, brandId, isBundle }) {
+  const [memberships, setMemberships] = useState([])
+  const [members, setMembers]         = useState([])
+  const [allBundles, setAllBundles]   = useState([])
+  const [allProducts, setAllProducts] = useState([])
+  const [loading, setLoading]         = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const [
+        { data: membershipRows },
+        { data: bundlesData },
+        { data: productsData },
+      ] = await Promise.all([
+        supabase.from('bundle_members').select('id, bundle_id').eq('product_id', productId),
+        supabase.from('products').select('id, name').eq('brand_id', brandId).eq('is_bundle', true).neq('id', productId).order('name'),
+        supabase.from('products').select('id, name').eq('brand_id', brandId).eq('is_bundle', false).order('name'),
+      ])
+
+      // Resolve bundle names for memberships
+      const bundleIds = (membershipRows ?? []).map(r => r.bundle_id)
+      const nameMap = {}
+      if (bundleIds.length) {
+        const { data: names } = await supabase.from('products').select('id, name').in('id', bundleIds)
+        ;(names ?? []).forEach(b => { nameMap[b.id] = b.name })
+      }
+      setMemberships((membershipRows ?? []).map(r => ({ id: r.id, bundleId: r.bundle_id, name: nameMap[r.bundle_id] ?? '' })))
+      setAllBundles(bundlesData ?? [])
+      setAllProducts(productsData ?? [])
+
+      // If this is a bundle, load its member products
+      if (isBundle) {
+        const { data: memberRows } = await supabase.from('bundle_members').select('id, product_id').eq('bundle_id', productId)
+        const productIds = (memberRows ?? []).map(r => r.product_id)
+        const prodNameMap = {}
+        if (productIds.length) {
+          const { data: names } = await supabase.from('products').select('id, name').in('id', productIds)
+          ;(names ?? []).forEach(p => { prodNameMap[p.id] = p.name })
+        }
+        setMembers((memberRows ?? []).map(r => ({ id: r.id, productId: r.product_id, name: prodNameMap[r.product_id] ?? '' })))
+      }
+      setLoading(false)
+    }
+    load()
+  }, [productId, brandId, isBundle])
+
+  async function addToBundle(bundleId) {
+    const { data } = await supabase.from('bundle_members')
+      .insert({ bundle_id: bundleId, product_id: productId }).select('id').single()
+    const bundle = allBundles.find(b => b.id === bundleId)
+    if (data && bundle) setMemberships(prev => [...prev, { id: data.id, bundleId, name: bundle.name }])
+  }
+
+  async function removeFromBundle(id) {
+    await supabase.from('bundle_members').delete().eq('id', id)
+    setMemberships(prev => prev.filter(m => m.id !== id))
+  }
+
+  async function addMember(pid) {
+    const { data } = await supabase.from('bundle_members')
+      .insert({ bundle_id: productId, product_id: pid }).select('id').single()
+    const product = allProducts.find(p => p.id === pid)
+    if (data && product) setMembers(prev => [...prev, { id: data.id, productId: pid, name: product.name }])
+  }
+
+  async function removeMember(id) {
+    await supabase.from('bundle_members').delete().eq('id', id)
+    setMembers(prev => prev.filter(m => m.id !== id))
+  }
+
+  if (loading) return null
+
+  const availableBundles  = allBundles.filter(b => !memberships.some(m => m.bundleId === b.id))
+  const availableProducts = allProducts.filter(p => !members.some(m => m.productId === p.id))
+
+  return (
+    <>
+      {isBundle && (
+        <div className="product-detail-section">
+          <div className="product-detail-section-title">Bundle members</div>
+          {members.map(m => (
+            <div key={m.id} className="bundle-row">
+              <span className="bundle-row-name">{m.name}</span>
+              <button type="button" className="bundle-row-remove" onClick={() => removeMember(m.id)}>×</button>
+            </div>
+          ))}
+          {members.length === 0 && <div className="bundle-empty">No products in this bundle yet.</div>}
+          {availableProducts.length > 0 && (
+            <select className="form-select bundle-add-select"
+              onChange={e => { if (e.target.value) { addMember(e.target.value); e.target.value = '' } }}>
+              <option value="">+ Add product to bundle…</option>
+              {availableProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+      <div className="product-detail-section">
+        <div className="product-detail-section-title">In bundles</div>
+        {memberships.map(m => (
+          <div key={m.id} className="bundle-row">
+            <span className="bundle-row-name">{m.name}</span>
+            <button type="button" className="bundle-row-remove" onClick={() => removeFromBundle(m.id)}>×</button>
+          </div>
+        ))}
+        {memberships.length === 0 && <div className="bundle-empty">Not part of any bundle.</div>}
+        {availableBundles.length > 0 && (
+          <select className="form-select bundle-add-select"
+            onChange={e => { if (e.target.value) { addToBundle(e.target.value); e.target.value = '' } }}>
+            <option value="">+ Add to bundle…</option>
+            {availableBundles.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
+      </div>
+    </>
+  )
+}
+
 // ─── Per-platform media grid ──────────────────────────────────────────────────
 
 function ProductAssets({ productId, brandId, platform, spec, assets, onAdd, onRemove }) {
@@ -421,7 +647,12 @@ export default function ProductDetail() {
           name:               data?.name               ?? '',
           status:             data?.status             ?? 'idea',
           niche:              data?.niche              ?? '',
-          product_type:       data?.product_type       ?? '',
+          tier:               data?.tier               ?? '',
+          theme:              data?.theme              ?? '',
+          palette:            data?.palette            ?? '',
+          formats:            data?.formats            ?? [],
+          sizes:              data?.sizes              ?? [],
+          fulfillment:        data?.fulfillment        ?? '',
           platform:           data?.platform           ?? [],
           price:              data?.price              ?? '',
           sku:                data?.sku                ?? '',
@@ -658,8 +889,28 @@ export default function ProductDetail() {
                   </select>
                 </div>
                 <div className="form-field">
-                  <label className="form-label">Product type</label>
-                  <input className="form-input" type="text" value={form.product_type} onChange={setField('product_type')} placeholder="e.g. Apparel" />
+                  <label className="form-label">Tier</label>
+                  <select className="form-select" value={form.tier} onChange={setField('tier')}>
+                    <option value="">— select —</option>
+                    {PRODUCT_TIERS.map(t => (
+                      <option key={t.value} value={t.value}>{t.label} · {t.hint}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Theme</label>
+                  <input className="form-input" type="text" value={form.theme} onChange={setField('theme')} placeholder="e.g. Botanical, Celestial" />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Palette</label>
+                  <input className="form-input" type="text" value={form.palette} onChange={setField('palette')} placeholder="e.g. Earth tones, Pastel" />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Fulfillment</label>
+                  <select className="form-select" value={form.fulfillment} onChange={setField('fulfillment')}>
+                    <option value="">— select —</option>
+                    {FULFILLMENT_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
                 </div>
                 <div className="form-field">
                   <label className="form-label">Price ($)</label>
@@ -682,6 +933,24 @@ export default function ProductDetail() {
                   <input className="form-input" type="date" value={form.last_updated_at} onChange={setField('last_updated_at')} />
                 </div>
               </div>
+            </div>
+
+            <div className="product-detail-section">
+              <LabelRow label="Formats" />
+              <LibraryTagInput
+                values={form.formats} onChange={v => setDirect('formats', v)}
+                brandId={activeBrand.id} type="format"
+                placeholder="Type format + Enter (e.g. A4, Letter, Square)"
+              />
+            </div>
+
+            <div className="product-detail-section">
+              <LabelRow label="Sizes" />
+              <LibraryTagInput
+                values={form.sizes} onChange={v => setDirect('sizes', v)}
+                brandId={activeBrand.id} type="size"
+                placeholder="Type size + Enter (e.g. 8×10, 11×14)"
+              />
             </div>
 
             <div className="product-detail-section">
@@ -741,8 +1010,16 @@ export default function ProductDetail() {
 
             <div className="product-detail-section">
               <LabelRow label="Shop section" />
-              <input className="form-input" type="text" value={pc.etsy.section} onChange={setPcField('etsy', 'section')} placeholder="e.g. Nurse Gifts, Wall Art" />
+              <LibrarySingleInput
+                value={pc.etsy.section}
+                onChange={v => setPc('etsy', 'section', v)}
+                brandId={activeBrand.id}
+                type="shop_section"
+                placeholder="e.g. Nurse Gifts, Wall Art"
+              />
             </div>
+
+            <BundleSection productId={id} brandId={activeBrand.id} isBundle={product.is_bundle ?? false} />
           </div>
         )}
 

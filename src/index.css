@@ -453,6 +453,7 @@ a {
 }
 
 .form-input {
+  width: 100%;
   height: 32px;
   padding: 0 10px;
   border: 0.5px solid var(--color-border-tertiary);
@@ -1073,6 +1074,7 @@ a {
 
 /* ─── Form select + textarea ────────────────────────────────────────── */
 .form-select {
+  width: 100%;
   height: 32px;
   padding: 0 10px;
   border: 0.5px solid var(--color-border-tertiary);
@@ -1090,6 +1092,7 @@ a {
 }
 
 .form-textarea {
+  width: 100%;
   padding: 8px 10px;
   border: 0.5px solid var(--color-border-tertiary);
   border-radius: var(--border-radius-md);
@@ -3602,4 +3605,99 @@ a {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ─── Library autocomplete suggestions ──────────────────────────────────────── */
+
+.library-input-wrap {
+  position: relative;
+}
+
+.library-suggestions {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  z-index: 50;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.library-suggestion-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  transition: background 60ms;
+}
+
+.library-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.library-suggestion-item:hover {
+  background: var(--color-background-secondary);
+}
+
+/* ─── Bundle section ─────────────────────────────────────────────────────────── */
+
+.bundle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  gap: 8px;
+}
+
+.bundle-row:last-of-type {
+  border-bottom: none;
+}
+
+.bundle-row-name {
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.bundle-row-remove {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 80ms;
+}
+
+.bundle-row-remove:hover {
+  color: #c0392b;
+}
+
+.bundle-empty {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  padding: 4px 0 8px;
+}
+
+.bundle-add-select {
+  margin-top: 8px;
+}
+
+.bundle-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #EEE8F8;
+  color: #5B3FA8;
+  margin-left: 6px;
 }

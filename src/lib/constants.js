@@ -27,6 +27,20 @@ export function productEmoji(type) {
   return TYPE_EMOJI[type] ?? '📦'
 }
 
+export const PRODUCT_TIERS = [
+  { value: 'free',       label: 'Free',       hint: '$0' },
+  { value: 'impulse',    label: 'Impulse',    hint: '$3–7' },
+  { value: 'core',       label: 'Core',       hint: '$9–17' },
+  { value: 'collection', label: 'Collection', hint: '$19–34' },
+  { value: 'vault',      label: 'Vault',      hint: '$37–67' },
+  { value: 'pod',        label: 'POD',        hint: '$18–85+' },
+  { value: 'bundle',     label: 'Bundle',     hint: '$22–67' },
+]
+
+export const FULFILLMENT_OPTIONS = [
+  'Digital', 'Inventory', 'Printify', 'Printful', 'Gelato', 'Prodigi', 'Podbase',
+]
+
 export const NICHES = [
   'Wall Art',
   'Desk/Workspace Art',
