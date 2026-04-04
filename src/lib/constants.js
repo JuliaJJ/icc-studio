@@ -68,8 +68,10 @@ export const NICHE_COLORS = {
 export const PLATFORMS = ['Etsy', 'Printify', 'KDP', 'Gumroad', 'Stan Store', 'Kittl']
 
 export const EVENT_TYPES = {
-  holiday:  { label: 'Holiday',  bg: '#EDE9FB', color: '#4C2F9E' },
-  launch:   { label: 'Launch',   bg: '#EAF3DE', color: '#27500A' },
-  campaign: { label: 'Campaign', bg: '#E6F1FB', color: '#0C447C' },
-  other:    { label: 'Other',    bg: '#F1EFE8', color: '#444441' },
+  holiday:          { label: 'Holiday',          bg: '#EDE9FB', color: '#4C2F9E' },
+  launch:           { label: 'Launch',           bg: '#EAF3DE', color: '#27500A' },
+  campaign:         { label: 'Campaign',         bg: '#E6F1FB', color: '#0C447C' },
+  build_deadline:   { label: 'Build Deadline',   bg: '#FEF3C7', color: '#92400E' },
+  listing_deadline: { label: 'Listing Deadline', bg: '#FFE4E6', color: '#9F1239' },
+  other:            { label: 'Other',            bg: '#F1EFE8', color: '#444441' },
 }
