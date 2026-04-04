@@ -5,6 +5,13 @@ import { useBrand } from '../context/BrandContext'
 import FilterPills from '../components/FilterPills'
 import { parseTaskInput } from '../lib/taskNlp'
 import { NICHE_COLORS } from '../lib/constants'
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
@@ -57,6 +64,55 @@ function ProductPill({ name, niche }) {
   )
 }
 
+// ─── Sortable task row ────────────────────────────────────────────────────────
+
+function SortableTaskRow({ task, canDrag, onToggle, onNavigate }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id, disabled: !canDrag })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="task-card-row">
+      {canDrag && (
+        <div className="drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder">
+          ⠿
+        </div>
+      )}
+      <TaskCheckbox checked={task.status === 'done'} onChange={() => onToggle(task)} />
+      <div className="task-card-content" onClick={() => onNavigate(task.id)}>
+        <div className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
+          {task.title}
+        </div>
+        {firstNoteLine(task.notes) && (
+          <div className="task-note-preview">{firstNoteLine(task.notes)}</div>
+        )}
+        <div className="task-meta">
+          {task.products && (
+            <ProductPill name={task.products.name} niche={task.products.niche} />
+          )}
+          {task.template_item_id && (
+            <span className="task-template-icon" title="Generated from template">⊞</span>
+          )}
+          {(task.labels ?? []).map(l => (
+            <span key={l} className="task-label-tag">{l}</span>
+          ))}
+          <PriorityDot priority={task.priority} />
+          {task.due_date && (
+            <span className="task-due">{formatDueDate(task.due_date)}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Quick-add bar ────────────────────────────────────────────────────────────
+
 function QuickAddBar({ brandId, onAdded }) {
   const [value, setValue] = useState('')
   const [adding, setAdding] = useState(false)
@@ -66,12 +122,7 @@ function QuickAddBar({ brandId, onAdded }) {
   function handleChange(e) {
     const raw = e.target.value
     setValue(raw)
-    if (raw.trim()) {
-      const parsed = parseTaskInput(raw)
-      setPreview(parsed)
-    } else {
-      setPreview(null)
-    }
+    setPreview(raw.trim() ? parseTaskInput(raw) : null)
   }
 
   async function handleKeyDown(e) {
@@ -81,7 +132,6 @@ function QuickAddBar({ brandId, onAdded }) {
     const { title, priority, labels, due_date } = parseTaskInput(value)
     if (!title) { setAdding(false); return }
 
-    // Upsert any new labels into the library
     if (labels.length > 0) {
       await Promise.all(labels.map(l =>
         supabase.from('value_library')
@@ -113,7 +163,7 @@ function QuickAddBar({ brandId, onAdded }) {
         disabled={adding}
         autoComplete="off"
       />
-      {preview && preview.title && (
+      {preview?.title && (
         <div className="quick-add-preview">
           <span className="quick-add-preview-title">{preview.title}</span>
           {preview.priority !== 'medium' && (
@@ -142,11 +192,16 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState('all')
 
+  const sensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: { distance: 6 },
+  }))
+
   useEffect(() => {
     if (!activeBrand.id) return
     setLoading(true)
     supabase.from('tasks').select('*, products(id, name, niche, is_archived)')
-      .eq('brand_id', activeBrand.id).order('created_at')
+      .eq('brand_id', activeBrand.id)
+      .order('sort_order').order('created_at')
       .then(({ data }) => {
         setTasks((data ?? []).filter(t => !t.products?.is_archived))
         setLoading(false)
@@ -163,6 +218,22 @@ export default function Tasks() {
     setTasks(prev => [task, ...prev])
   }
 
+  async function handleDragEnd(event) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    setTasks(prev => {
+      const oldIndex = prev.findIndex(t => t.id === active.id)
+      const newIndex = prev.findIndex(t => t.id === over.id)
+      const reordered = arrayMove(prev, oldIndex, newIndex).map((t, i) => ({ ...t, sort_order: i }))
+      // Persist new order
+      reordered.forEach((t, i) => {
+        supabase.from('tasks').update({ sort_order: i }).eq('id', t.id)
+      })
+      return reordered
+    })
+  }
+
   const allLabels = [...new Set(tasks.flatMap(t => t.labels ?? []))].sort()
   const activeLabel = filter.startsWith('label:') ? filter.slice(6) : null
 
@@ -170,17 +241,21 @@ export default function Tasks() {
     if (activeLabel && !allLabels.includes(activeLabel)) setFilter('all')
   }, [allLabels.join(',')])
 
-  const filtered = tasks
-    .filter(task => {
-      if (filter === 'today')  return task.due_date === TODAY && task.status === 'open'
-      if (filter === 'high')   return task.priority === 'high' && task.status === 'open'
-      if (activeLabel)         return (task.labels ?? []).includes(activeLabel)
-      return true
-    })
-    .sort((a, b) => {
-      if (a.status !== b.status) return a.status === 'open' ? -1 : 1
-      return (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
-    })
+  const isUnfiltered = filter === 'all' && !activeLabel
+
+  const filtered = isUnfiltered
+    ? tasks
+    : tasks
+        .filter(task => {
+          if (filter === 'today') return task.due_date === TODAY && task.status === 'open'
+          if (filter === 'high')  return task.priority === 'high' && task.status === 'open'
+          if (activeLabel)        return (task.labels ?? []).includes(activeLabel)
+          return true
+        })
+        .sort((a, b) => {
+          if (a.status !== b.status) return a.status === 'open' ? -1 : 1
+          return (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
+        })
 
   return (
     <div className="tasks-page">
@@ -216,34 +291,21 @@ export default function Tasks() {
           </span>
         </div>
       ) : (
-        <div className="task-list">
-          {filtered.map(task => (
-            <div key={task.id} className="task-card-row">
-              <TaskCheckbox checked={task.status === 'done'} onChange={() => toggleTask(task)} />
-              <div className="task-card-content" onClick={() => navigate(`/tasks/${task.id}`)}>
-                <div className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
-                  {task.title}
-                </div>
-                {firstNoteLine(task.notes) && (
-                  <div className="task-note-preview">{firstNoteLine(task.notes)}</div>
-                )}
-                <div className="task-meta">
-                  {task.products && (
-                    <ProductPill name={task.products.name} niche={task.products.niche} />
-                  )}
-                  {task.template_item_id && <span className="task-template-icon" title="Generated from template">⊞</span>}
-                  {(task.labels ?? []).map(l => (
-                    <span key={l} className="task-label-tag">{l}</span>
-                  ))}
-                  <PriorityDot priority={task.priority} />
-                  {task.due_date && (
-                    <span className="task-due">{formatDueDate(task.due_date)}</span>
-                  )}
-                </div>
-              </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            <div className="task-list">
+              {filtered.map(task => (
+                <SortableTaskRow
+                  key={task.id}
+                  task={task}
+                  canDrag={isUnfiltered}
+                  onToggle={toggleTask}
+                  onNavigate={id => navigate(`/tasks/${id}`)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   )
