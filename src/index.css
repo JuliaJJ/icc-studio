@@ -2276,6 +2276,12 @@ a {
   flex-shrink: 0;
 }
 
+.cal-recur-icon {
+  opacity: 0.6;
+  margin-right: 3px;
+  font-size: 10px;
+}
+
 /* ─── Calendar view toggle ───────────────────────────────────────────── */
 .cal-view-toggle {
   display: flex;

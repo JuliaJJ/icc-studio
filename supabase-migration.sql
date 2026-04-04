@@ -467,3 +467,9 @@ alter table tasks    add column if not exists product_id       uuid references p
 alter table tasks    add column if not exists template_item_id uuid references task_template_items(id) on delete set null;
 alter table products add column if not exists template_id      uuid references task_templates(id) on delete set null;
 alter table products add column if not exists is_archived      boolean default false;
+
+
+-- ─── Recurring calendar events ────────────────────────────────────────────────
+alter table launch_events
+  add column if not exists recurrence_type     text check (recurrence_type in ('daily', 'weekly', 'monthly', 'yearly')),
+  add column if not exists recurrence_end_date date;
