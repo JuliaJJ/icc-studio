@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import { PRODUCT_STATUS, productEmoji, PLATFORMS } from '../lib/constants'
+import { PRODUCT_STATUS, productEmoji, PLATFORMS, NICHES } from '../lib/constants'
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
@@ -652,7 +652,10 @@ export default function ProductDetail() {
               <div className="product-fields-grid">
                 <div className="form-field">
                   <label className="form-label">Niche</label>
-                  <input className="form-input" type="text" value={form.niche} onChange={setField('niche')} placeholder="e.g. Nurses" />
+                  <select className="form-select" value={form.niche} onChange={setField('niche')}>
+                    <option value="">— select —</option>
+                    {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
                 </div>
                 <div className="form-field">
                   <label className="form-label">Product type</label>

@@ -27,6 +27,18 @@ export function productEmoji(type) {
   return TYPE_EMOJI[type] ?? '📦'
 }
 
+export const NICHES = [
+  'Wall Art',
+  'Desk/Workspace Art',
+  'Phone Wallpapers',
+  'Greeting Cards',
+  'Stationery',
+  'Postcards',
+  'Wearables',
+  'Home Textiles',
+  'Accessories',
+]
+
 export const PLATFORMS = ['Etsy', 'Printify', 'KDP', 'Gumroad', 'Stan Store', 'Kittl']
 
 export const LAUNCH_STATUS_OPTIONS = ['planned', 'ready', 'soon', 'live', 'ended']

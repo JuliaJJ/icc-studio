@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
+import { NICHES } from '../lib/constants'
 
 // ─── Harvest Panel ────────────────────────────────────────────────────────────
 
@@ -261,18 +262,10 @@ function AddKeywordPanel({ brandId, existingNiches, onSave, onClose }) {
           </div>
           <div className="form-field">
             <label className="form-label">Niche</label>
-            <input
-              className="form-input"
-              type="text"
-              list="niche-suggestions"
-              value={niche}
-              onChange={e => setNiche(e.target.value)}
-              required
-              placeholder="e.g. Nurses"
-            />
-            <datalist id="niche-suggestions">
-              {existingNiches.map(n => <option key={n} value={n} />)}
-            </datalist>
+            <select className="form-select" value={niche} onChange={e => setNiche(e.target.value)} required>
+              <option value="">— select —</option>
+              {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
           </div>
           <div className="panel-actions">
             <button type="submit" className="btn-primary" disabled={saving}>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import FilterPills from '../components/FilterPills'
-import { PRODUCT_STATUS, productEmoji } from '../lib/constants'
+import { PRODUCT_STATUS, productEmoji, NICHES } from '../lib/constants'
 
 function StatusBadge({ status }) {
   const cfg = PRODUCT_STATUS[status]
@@ -48,7 +48,10 @@ function AddProductPanel({ brandId, onSave, onClose }) {
           </div>
           <div className="form-field">
             <label className="form-label">Niche</label>
-            <input className="form-input" type="text" value={form.niche} onChange={setField('niche')} placeholder="e.g. Nurses, Esoterica" />
+            <select className="form-select" value={form.niche} onChange={setField('niche')}>
+              <option value="">— select —</option>
+              {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
           </div>
           <div className="form-field">
             <label className="form-label">Product type</label>
