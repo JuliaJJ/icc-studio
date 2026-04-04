@@ -2768,6 +2768,36 @@ a {
   line-height: 1.5;
 }
 
+/* ─── Settings tab toggles ──────────────────────────────────────────────── */
+.settings-tab-hint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.settings-tab-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-tab-toggle {
+  padding: 4px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
+}
+
+.settings-tab-toggle:hover:not(.settings-tab-toggle--active) {
+  border-color: var(--color-border-secondary);
+  color: var(--color-text-primary);
+}
+
 /* ─── Search ────────────────────────────────────────────────────────────── */
 .topbar-right {
   display: flex;

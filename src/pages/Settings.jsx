@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { useBrand } from '../context/BrandContext'
 
+const AVAILABLE_TABS = [
+  { id: 'Etsy',       label: 'Etsy' },
+  { id: 'KDP',        label: 'KDP' },
+  { id: 'Gumroad',    label: 'Gumroad' },
+  { id: 'Stan Store', label: 'Stan Store' },
+  { id: 'Pinterest',  label: 'Pinterest' },
+  { id: 'Social',     label: 'Social' },
+]
+
 function ColorField({ label, value, onChange }) {
   return (
     <div className="form-field">
@@ -34,7 +43,17 @@ function BrandCard({ brand }) {
     accent_color: brand.accent_color,
     tag_bg_color: brand.tag_bg_color ?? '#F5F5F3',
     tag_text_color: brand.tag_text_color ?? '#1A1A18',
+    platform_tabs: brand.platform_tabs ?? ['Etsy', 'Pinterest', 'Social'],
   })
+
+  function toggleTab(id) {
+    setForm(prev => {
+      const tabs = prev.platform_tabs.includes(id)
+        ? prev.platform_tabs.filter(t => t !== id)
+        : [...prev.platform_tabs, id]
+      return { ...prev, platform_tabs: tabs }
+    })
+  }
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
@@ -121,6 +140,27 @@ function BrandCard({ brand }) {
             value={form.tag_text_color}
             onChange={set('tag_text_color')}
           />
+        </div>
+
+        <div className="form-field">
+          <label className="form-label">Product page tabs</label>
+          <div className="settings-tab-hint">Overview is always shown. Select which platform tabs appear on product pages for this brand.</div>
+          <div className="settings-tab-toggles">
+            {AVAILABLE_TABS.map(tab => {
+              const active = form.platform_tabs.includes(tab.id)
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`settings-tab-toggle ${active ? 'settings-tab-toggle--active' : ''}`}
+                  style={active ? { background: form.accent_color, borderColor: form.accent_color, color: '#fff' } : {}}
+                  onClick={() => toggleTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div className="settings-brand-footer">

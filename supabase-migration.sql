@@ -329,6 +329,7 @@ insert into brands (name, short_code, tagline, accent_color, tag_bg_color, tag_t
 
 alter table campaigns add column if not exists niche text;
 alter table campaigns add column if not exists product_ids uuid[] default '{}';
+alter table brands add column if not exists platform_tabs text[] default '{"Etsy","Pinterest","Social"}';
 
 
 -- ─── Storage bucket ───────────────────────────────────────────────────────────
