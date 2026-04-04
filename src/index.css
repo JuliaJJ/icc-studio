@@ -3211,3 +3211,143 @@ a {
   border-color: var(--color-border-secondary);
   color: var(--color-text-primary);
 }
+
+/* ─── Product detail tabs ────────────────────────────────────────────────── */
+
+.product-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  margin-bottom: 20px;
+  padding-bottom: 0;
+}
+
+.product-tab {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -0.5px;
+  border-radius: 0;
+  transition: color 80ms ease;
+}
+
+.product-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.product-tab--active {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--brand-accent);
+}
+
+.product-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Label row (label + char count + copy button) ───────────────────────── */
+
+.form-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+
+.form-label-row .form-label {
+  margin-bottom: 0;
+}
+
+.form-label-row-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ─── Copy button ────────────────────────────────────────────────────────── */
+
+.copy-btn {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  padding: 2px 6px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 4px;
+  background: var(--color-background-secondary);
+  transition: color 80ms, border-color 80ms;
+  white-space: nowrap;
+}
+
+.copy-btn:hover:not(:disabled) {
+  color: var(--brand-accent);
+  border-color: var(--brand-accent);
+}
+
+.copy-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ─── Char count ─────────────────────────────────────────────────────────── */
+
+.char-count {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.char-count--warn {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+/* ─── Etsy tag warnings ──────────────────────────────────────────────────── */
+
+.etsy-tag-warn {
+  color: #c0392b;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.etsy-tag-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.etsy-tag-count {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.etsy-tag-count--full {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.etsy-tag-warn-msg {
+  font-size: 11px;
+  color: #c0392b;
+}
+
+/* ─── Keyword tag warning variant ────────────────────────────────────────── */
+
+.keyword-tag--warn {
+  border-color: #f5c6c0;
+  background: #fff5f5;
+  color: #c0392b;
+}
+
+/* ─── Field hint ─────────────────────────────────────────────────────────── */
+
+.field-hint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 3px;
+}
