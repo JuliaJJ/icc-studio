@@ -3,41 +3,152 @@ import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import { LAUNCH_STATUS_OPTIONS } from '../lib/constants'
 
-const TODAY = new Date().toISOString().split('T')[0]
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+// Zero-timezone-drift date string from a local Date object
+function toDateStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function formatDateShort(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+const TODAY = toDateStr(new Date())
+
+// Build a 5-or-6 row grid for the given month
+function buildWeeks(year, month) {
+  const startDow = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const days = []
+
+  for (let i = startDow; i > 0; i--) {
+    days.push({ date: new Date(year, month, 1 - i), currentMonth: false })
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push({ date: new Date(year, month, d), currentMonth: true })
+  }
+  let next = 1
+  while (days.length % 7 !== 0) {
+    days.push({ date: new Date(year, month + 1, next++), currentMonth: false })
+  }
+
+  const weeks = []
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
+  return weeks
 }
 
-function monthLabel(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+// Greedy row-assignment so overlapping events stack
+function assignRows(weekEvents) {
+  const rowEnds = []
+  return weekEvents.map(event => {
+    let row = rowEnds.findIndex(end => end < event.startCol)
+    if (row === -1) { row = rowEnds.length; rowEnds.push(event.endCol) }
+    else { rowEnds[row] = event.endCol }
+    return { ...event, row }
+  })
 }
 
-function getStatusBadge(event) {
-  if (event.status === 'live') return { label: 'Live', cls: 'badge--live' }
-  if (event.status === 'ready') return { label: 'Ready', cls: 'badge--ready' }
-  if (event.status === 'ended') return { label: 'Ended', cls: 'badge--planned' }
-  const daysUntil = Math.ceil((new Date(event.launch_date) - new Date()) / 86400000)
-  if (daysUntil <= 30 && daysUntil >= 0) return { label: 'Soon', cls: 'badge--soon' }
-  return { label: 'Planned', cls: 'badge--planned' }
+const STATUS_STYLE = {
+  planned: { bg: '#F1EFE8', color: '#444441' },
+  ready:   { bg: '#FAEEDA', color: '#633806' },
+  soon:    { bg: '#E6F1FB', color: '#0C447C' },
+  live:    { bg: '#EAF3DE', color: '#27500A' },
+  ended:   { bg: '#EBEBEB', color: '#888886' },
 }
 
-function EventPanel({ event, brandId, onSave, onDelete, onClose }) {
+function eventStatus(event) {
+  if (event.status === 'live')  return 'live'
+  if (event.status === 'ready') return 'ready'
+  if (event.status === 'ended') return 'ended'
+  const days = Math.ceil((new Date(event.launch_date) - new Date()) / 86400000)
+  if (days >= 0 && days <= 30) return 'soon'
+  return 'planned'
+}
+
+// ─── Week row ─────────────────────────────────────────────────────────────────
+
+function WeekRow({ weekDays, events, onDayClick, onEventClick }) {
+  const weekStart = toDateStr(weekDays[0].date)
+  const weekEnd   = toDateStr(weekDays[6].date)
+
+  const rawEvents = events
+    .filter(e => {
+      const end = e.end_date || e.launch_date
+      return e.launch_date <= weekEnd && end >= weekStart
+    })
+    .map(e => {
+      const end = e.end_date || e.launch_date
+      let startCol = weekDays.findIndex(d => toDateStr(d.date) === e.launch_date)
+      if (startCol === -1) startCol = 0
+      let endCol = weekDays.findIndex(d => toDateStr(d.date) === end)
+      if (endCol === -1) endCol = 6
+      return { ...e, startCol, endCol }
+    })
+    .sort((a, b) => a.startCol - b.startCol || (b.endCol - b.startCol) - (a.endCol - a.startCol))
+
+  const placed = assignRows(rawEvents)
+  const rowCount = placed.length ? Math.max(...placed.map(e => e.row)) + 1 : 0
+
+  return (
+    <div className="cal-week">
+      <div className="cal-day-row">
+        {weekDays.map((day, i) => {
+          const ds = toDateStr(day.date)
+          return (
+            <div
+              key={i}
+              className={`cal-day-cell${day.currentMonth ? '' : ' cal-day-cell--outside'}`}
+              onClick={() => onDayClick(ds)}
+            >
+              <span className={`cal-day-number${ds === TODAY ? ' cal-day-number--today' : ''}`}>
+                {day.date.getDate()}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {rowCount > 0 && (
+        <div className="cal-event-layer" style={{ gridTemplateRows: `repeat(${rowCount}, auto)` }}>
+          {placed.map(event => {
+            const st = STATUS_STYLE[eventStatus(event)] ?? STATUS_STYLE.planned
+            const startsHere = event.launch_date >= weekStart
+            const endsHere   = (event.end_date ?? event.launch_date) <= weekEnd
+            const cls = [
+              'cal-event-bar',
+              startsHere ? 'cal-event-bar--start' : '',
+              endsHere   ? 'cal-event-bar--end'   : '',
+            ].filter(Boolean).join(' ')
+
+            return (
+              <div
+                key={event.id + weekStart}
+                className={cls}
+                style={{
+                  gridColumn: `${event.startCol + 1} / ${event.endCol + 2}`,
+                  gridRow: event.row + 1,
+                  background: st.bg,
+                  color: st.color,
+                }}
+                onClick={e => { e.stopPropagation(); onEventClick(event) }}
+                title={event.name}
+              >
+                {startsHere ? event.name : ''}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Event panel ──────────────────────────────────────────────────────────────
+
+function EventPanel({ event, defaultDate, brandId, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
-    name: event?.name ?? '',
-    launch_date: event?.launch_date ?? '',
-    end_date: event?.end_date ?? '',
-    status: event?.status ?? 'planned',
-    notes: event?.notes ?? '',
+    name:        event?.name        ?? '',
+    launch_date: event?.launch_date ?? defaultDate ?? '',
+    end_date:    event?.end_date    ?? '',
+    status:      event?.status      ?? 'planned',
+    notes:       event?.notes       ?? '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -46,12 +157,7 @@ function EventPanel({ event, brandId, onSave, onDelete, onClose }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setSaving(true)
-    const payload = {
-      ...form,
-      end_date: form.end_date || null,
-      notes: form.notes || null,
-      brand_id: brandId,
-    }
+    const payload = { ...form, end_date: form.end_date || null, notes: form.notes || null, brand_id: brandId }
     if (event) {
       const { data } = await supabase.from('launch_events').update(payload).eq('id', event.id).select().single()
       onSave(data, 'update')
@@ -81,7 +187,7 @@ function EventPanel({ event, brandId, onSave, onDelete, onClose }) {
         <form onSubmit={handleSubmit} className="panel-form">
           <div className="form-field">
             <label className="form-label">Event name</label>
-            <input className="form-input" type="text" value={form.name} onChange={setField('name')} required autoFocus placeholder="e.g. Nurse Appreciation Week" />
+            <input className="form-input" type="text" value={form.name} onChange={setField('name')} required autoFocus placeholder="e.g. Spring Collection Drop" />
           </div>
           <div className="form-field">
             <label className="form-label">Launch date</label>
@@ -101,13 +207,11 @@ function EventPanel({ event, brandId, onSave, onDelete, onClose }) {
           </div>
           <div className="form-field">
             <label className="form-label">Notes</label>
-            <textarea className="form-textarea" rows={3} value={form.notes} onChange={setField('notes')} placeholder="Platform strategy, linked products, etc." />
+            <textarea className="form-textarea" rows={3} value={form.notes} onChange={setField('notes')} placeholder="Platform strategy, linked products…" />
           </div>
           <div className="panel-actions">
             {event && <button type="button" className="btn-danger" onClick={handleDelete}>Delete</button>}
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : 'Save event'}
-            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save event'}</button>
           </div>
         </form>
       </div>
@@ -115,25 +219,25 @@ function EventPanel({ event, brandId, onSave, onDelete, onClose }) {
   )
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function LaunchCalendar() {
   const { activeBrand } = useBrand()
-  const [events, setEvents] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [events, setEvents]       = useState([])
+  const [loading, setLoading]     = useState(true)
   const [panelOpen, setPanelOpen] = useState(false)
-  const [editingEvent, setEditingEvent] = useState(null)
+  const [editing, setEditing]     = useState(null)
+  const [defaultDate, setDefaultDate] = useState('')
+
+  const now = new Date()
+  const [viewYear,  setViewYear]  = useState(now.getFullYear())
+  const [viewMonth, setViewMonth] = useState(now.getMonth())
 
   useEffect(() => {
     if (!activeBrand.id) return
     setLoading(true)
-    supabase
-      .from('launch_events')
-      .select('*')
-      .eq('brand_id', activeBrand.id)
-      .order('launch_date')
-      .then(({ data }) => {
-        setEvents(data ?? [])
-        setLoading(false)
-      })
+    supabase.from('launch_events').select('*').eq('brand_id', activeBrand.id).order('launch_date')
+      .then(({ data }) => { setEvents(data ?? []); setLoading(false) })
   }, [activeBrand.id])
 
   function handleSave(saved, mode) {
@@ -143,21 +247,23 @@ export default function LaunchCalendar() {
         : prev.map(e => e.id === saved.id ? saved : e)
     )
   }
+  function handleDelete(id) { setEvents(prev => prev.filter(e => e.id !== id)) }
 
-  function handleDelete(id) {
-    setEvents(prev => prev.filter(e => e.id !== id))
+  function openAdd(date = '') { setEditing(null); setDefaultDate(date); setPanelOpen(true) }
+  function openEdit(event) { setEditing(event); setDefaultDate(''); setPanelOpen(true) }
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
   }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
+  }
+  function goToday() { setViewYear(now.getFullYear()); setViewMonth(now.getMonth()) }
 
-  function openAdd() { setEditingEvent(null); setPanelOpen(true) }
-  function openEdit(event) { setEditingEvent(event); setPanelOpen(true) }
-
-  // Group by month
-  const grouped = events.reduce((acc, event) => {
-    const key = monthLabel(event.launch_date)
-    if (!acc[key]) acc[key] = []
-    acc[key].push(event)
-    return acc
-  }, {})
+  const weeks = buildWeeks(viewYear, viewMonth)
+  const monthLabel = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   if (loading) return <div className="loading-state">Loading…</div>
 
@@ -165,48 +271,44 @@ export default function LaunchCalendar() {
     <div className="launch-calendar-page">
       <div className="page-header">
         <h1 className="page-title">Launch Calendar</h1>
-        <button className="btn-add" onClick={openAdd}>+ Add event</button>
+        <button className="btn-add" onClick={() => openAdd()}>+ Add event</button>
       </div>
 
-      {events.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-icon">◻</span>
-          <span className="empty-text">No events yet</span>
-          <button className="btn-add" onClick={openAdd}>+ Add event</button>
+      <div className="cal-nav">
+        <button className="cal-nav-btn" onClick={prevMonth}>←</button>
+        <span className="cal-nav-title">{monthLabel}</span>
+        <button className="cal-nav-btn" onClick={nextMonth}>→</button>
+        <button className="cal-today-btn" onClick={goToday}>Today</button>
+      </div>
+
+      <div className="cal-grid">
+        <div className="cal-dow-row">
+          {DOW.map(d => <div key={d} className="cal-dow">{d}</div>)}
         </div>
-      ) : (
-        <div className="card">
-          {Object.entries(grouped).map(([month, monthEvents], gi) => (
-            <div key={month}>
-              <div className={`launch-month-divider ${gi === 0 ? 'launch-month-divider--first' : ''}`}>
-                {month}
-              </div>
-              {monthEvents.map(event => {
-                const badge = getStatusBadge(event)
-                const dateRange = event.end_date
-                  ? `${formatDateShort(event.launch_date)} – ${formatDateShort(event.end_date)}`
-                  : formatDateShort(event.launch_date)
-                return (
-                  <div key={event.id} className="launch-event-row" onClick={() => openEdit(event)}>
-                    <div className="launch-event-main">
-                      <span className="launch-event-name">{event.name}</span>
-                      {event.notes && <span className="launch-event-notes">{event.notes}</span>}
-                    </div>
-                    <div className="launch-event-right">
-                      <span className="launch-event-date">{dateRange}</span>
-                      <span className={`badge ${badge.cls}`}>{badge.label}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      )}
+        {weeks.map((week, wi) => (
+          <WeekRow
+            key={wi}
+            weekDays={week}
+            events={events}
+            onDayClick={openAdd}
+            onEventClick={openEdit}
+          />
+        ))}
+      </div>
+
+      <div className="cal-legend">
+        {Object.entries(STATUS_STYLE).map(([status, st]) => (
+          <span key={status} className="cal-legend-item">
+            <span className="cal-legend-dot" style={{ background: st.bg, border: `1px solid ${st.color}22` }} />
+            <span style={{ color: st.color }}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+          </span>
+        ))}
+      </div>
 
       {panelOpen && (
         <EventPanel
-          event={editingEvent}
+          event={editing}
+          defaultDate={defaultDate}
           brandId={activeBrand.id}
           onSave={handleSave}
           onDelete={handleDelete}
