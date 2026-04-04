@@ -217,6 +217,76 @@ function EventPanel({ event, defaultDate, brandId, onSave, onDelete, onClose }) 
   )
 }
 
+// ─── List view ────────────────────────────────────────────────────────────────
+
+function formatListDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function formatListMonth(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+function CalendarListView({ events, onEventClick, onDayClick }) {
+  if (events.length === 0) {
+    return <div className="cal-list-empty">No events yet — click + Add event to create one.</div>
+  }
+
+  // Group by month of start_date
+  const groups = []
+  let currentMonth = null
+  for (const event of [...events].sort((a, b) => a.start_date.localeCompare(b.start_date))) {
+    const month = event.start_date.slice(0, 7) // YYYY-MM
+    if (month !== currentMonth) {
+      currentMonth = month
+      groups.push({ month, label: formatListMonth(event.start_date), events: [] })
+    }
+    groups[groups.length - 1].events.push(event)
+  }
+
+  return (
+    <div className="cal-list">
+      {groups.map(group => (
+        <div key={group.month} className="cal-list-group">
+          <div className="cal-list-month-header">{group.label}</div>
+          {group.events.map(event => {
+            const cfg = EVENT_TYPES[event.event_type] ?? EVENT_TYPES.other
+            const isPast = event.start_date < TODAY
+            const isToday = event.start_date === TODAY
+            const isMultiDay = event.end_date && event.end_date !== event.start_date
+            return (
+              <div
+                key={event.id}
+                className={`cal-list-row${isPast ? ' cal-list-row--past' : ''}${isToday ? ' cal-list-row--today' : ''}`}
+                onClick={() => onEventClick(event)}
+              >
+                <div className="cal-list-date">
+                  {isToday
+                    ? <span className="cal-list-date-today">Today</span>
+                    : formatListDate(event.start_date)
+                  }
+                  {isMultiDay && (
+                    <span className="cal-list-date-end">→ {formatListDate(event.end_date)}</span>
+                  )}
+                </div>
+                <span className="cal-list-type-pill" style={{ background: cfg.bg, color: cfg.color }}>
+                  {cfg.label}
+                </span>
+                <span className="cal-list-name">{event.name}</span>
+                {event.notes && (
+                  <span className="cal-list-notes">{event.notes.split('\n')[0]}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LaunchCalendar() {
@@ -226,6 +296,7 @@ export default function LaunchCalendar() {
   const [panelOpen, setPanelOpen] = useState(false)
   const [editing, setEditing]     = useState(null)
   const [defaultDate, setDefaultDate] = useState('')
+  const [view, setView]           = useState('grid')
 
   const now = new Date()
   const [viewYear,  setViewYear]  = useState(now.getFullYear())
@@ -273,35 +344,58 @@ export default function LaunchCalendar() {
       </div>
 
       <div className="cal-nav">
-        <button className="cal-nav-btn" onClick={prevMonth}>←</button>
-        <span className="cal-nav-title">{monthLabel}</span>
-        <button className="cal-nav-btn" onClick={nextMonth}>→</button>
-        <button className="cal-today-btn" onClick={goToday}>Today</button>
-      </div>
-
-      <div className="cal-grid">
-        <div className="cal-dow-row">
-          {DOW.map(d => <div key={d} className="cal-dow">{d}</div>)}
+        {view === 'grid' ? (
+          <>
+            <button className="cal-nav-btn" onClick={prevMonth}>←</button>
+            <span className="cal-nav-title">{monthLabel}</span>
+            <button className="cal-nav-btn" onClick={nextMonth}>→</button>
+            <button className="cal-today-btn" onClick={goToday}>Today</button>
+          </>
+        ) : (
+          <span className="cal-nav-title">All events</span>
+        )}
+        <div className="cal-view-toggle">
+          <button
+            className={`cal-view-btn ${view === 'grid' ? 'cal-view-btn--active' : ''}`}
+            onClick={() => setView('grid')}
+            title="Grid view"
+          >⊞</button>
+          <button
+            className={`cal-view-btn ${view === 'list' ? 'cal-view-btn--active' : ''}`}
+            onClick={() => setView('list')}
+            title="List view"
+          >≡</button>
         </div>
-        {weeks.map((week, wi) => (
-          <WeekRow
-            key={wi}
-            weekDays={week}
-            events={events}
-            onDayClick={openAdd}
-            onEventClick={openEdit}
-          />
-        ))}
       </div>
 
-      <div className="cal-legend">
-        {Object.entries(EVENT_TYPES).map(([type, cfg]) => (
-          <span key={type} className="cal-legend-item">
-            <span className="cal-legend-dot" style={{ background: cfg.bg, border: `1px solid ${cfg.color}33` }} />
-            <span style={{ color: cfg.color }}>{cfg.label}</span>
-          </span>
-        ))}
-      </div>
+      {view === 'grid' ? (
+        <>
+          <div className="cal-grid">
+            <div className="cal-dow-row">
+              {DOW.map(d => <div key={d} className="cal-dow">{d}</div>)}
+            </div>
+            {weeks.map((week, wi) => (
+              <WeekRow
+                key={wi}
+                weekDays={week}
+                events={events}
+                onDayClick={openAdd}
+                onEventClick={openEdit}
+              />
+            ))}
+          </div>
+          <div className="cal-legend">
+            {Object.entries(EVENT_TYPES).map(([type, cfg]) => (
+              <span key={type} className="cal-legend-item">
+                <span className="cal-legend-dot" style={{ background: cfg.bg, border: `1px solid ${cfg.color}33` }} />
+                <span style={{ color: cfg.color }}>{cfg.label}</span>
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <CalendarListView events={events} onEventClick={openEdit} onDayClick={openAdd} />
+      )}
 
       {panelOpen && (
         <EventPanel
