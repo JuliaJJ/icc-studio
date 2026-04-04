@@ -577,6 +577,129 @@ a {
   opacity: 0.6;
 }
 
+/* ─── Manage Libraries ─────────────────────────────────────────────────────── */
+
+.libraries-intro {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.library-section {
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  background: var(--color-surface);
+}
+
+.library-section--link {
+  background: var(--color-surface-hover);
+}
+
+.library-section-header {
+  margin-bottom: 12px;
+}
+
+.library-section-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-primary);
+  margin-bottom: 3px;
+}
+
+.library-section-hint {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.library-section-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-height: 24px;
+}
+
+.library-section-empty {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.library-value-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 10px;
+  background: var(--color-surface-hover);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+.library-value-remove {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-tertiary);
+  padding: 0 1px;
+  border-radius: 50%;
+  transition: color 100ms;
+}
+
+.library-value-remove:hover {
+  color: var(--color-text-primary);
+}
+
+.library-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.library-add-input {
+  flex: 1;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+.library-add-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--color-surface-hover);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background 100ms;
+  white-space: nowrap;
+}
+
+.library-add-btn:hover:not(:disabled) {
+  background: var(--color-border-secondary);
+}
+
+.library-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.library-keywords-link {
+  font-size: 13px;
+  color: var(--brand-accent);
+  text-decoration: none;
+}
+
+.library-keywords-link:hover {
+  text-decoration: underline;
+}
+
 /* ─── Page header (shared) ──────────────────────────────────────────── */
 .page-header {
   display: flex;
