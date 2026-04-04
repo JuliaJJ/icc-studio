@@ -8,6 +8,7 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Today from './pages/Today'
 import Tasks from './pages/Tasks'
+import TaskDetail from './pages/TaskDetail'
 import Pipeline from './pages/Pipeline'
 import LaunchCalendar from './pages/LaunchCalendar'
 import Catalog from './pages/Catalog'
@@ -44,6 +45,7 @@ createRoot(app).render(
             >
               <Route index element={<Today />} />
               <Route path="tasks" element={<Tasks />} />
+              <Route path="tasks/:id" element={<TaskDetail />} />
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="calendar" element={<LaunchCalendar />} />
               <Route path="catalog" element={<Catalog />} />

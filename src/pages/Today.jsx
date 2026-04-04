@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import TaskPanel from '../components/TaskPanel'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
@@ -60,6 +60,7 @@ function MetricCard({ label, value, sub }) {
 
 export default function Today() {
   const { activeBrand } = useBrand()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [metrics, setMetrics] = useState({
     liveCount: 0, livePlatforms: [], draftCount: 0,
@@ -67,8 +68,6 @@ export default function Today() {
   })
   const [tasks, setTasks] = useState([])
   const [launches, setLaunches] = useState([])
-  const [editingTask, setEditingTask] = useState(null)
-  const [panelOpen, setPanelOpen] = useState(false)
 
   useEffect(() => {
     if (!activeBrand.id) return
@@ -122,16 +121,6 @@ export default function Today() {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
   }
 
-  function handleSave(saved, mode) {
-    setTasks(prev =>
-      mode === 'insert' ? [...prev, saved] : prev.map(t => t.id === saved.id ? saved : t)
-    )
-  }
-
-  function handleDelete(id) {
-    setTasks(prev => prev.filter(t => t.id !== id))
-  }
-
   const quickLinks = activeBrand.quick_links ?? []
 
   const revenueSubLine = metrics.revenueChange !== null
@@ -182,7 +171,7 @@ export default function Today() {
                 <div key={task.id} className="task-row">
                   <TaskCheckbox checked={task.status === 'done'} onChange={() => toggleTask(task)} />
                   <div className="task-row-content" style={{ cursor: 'pointer' }}
-                    onClick={() => { setEditingTask(task); setPanelOpen(true) }}>
+                    onClick={() => navigate(`/tasks/${task.id}`)}>
                     <span className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
                       {task.title}
                     </span>
@@ -245,15 +234,6 @@ export default function Today() {
         </div>
       </div>
 
-      {panelOpen && (
-        <TaskPanel
-          task={editingTask}
-          brandId={activeBrand.id}
-          onSave={handleSave}
-          onDelete={handleDelete}
-          onClose={() => setPanelOpen(false)}
-        />
-      )}
     </div>
   )
 }

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import FilterPills from '../components/FilterPills'
-import TaskPanel from '../components/TaskPanel'
+import { parseTaskInput } from '../lib/taskNlp'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
@@ -41,15 +42,90 @@ function PriorityDot({ priority }) {
   return <span className={`priority-dot priority-dot--${priority}`} />
 }
 
+function QuickAddBar({ brandId, onAdded }) {
+  const [value, setValue] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [preview, setPreview] = useState(null)
+  const inputRef = useRef(null)
+
+  function handleChange(e) {
+    const raw = e.target.value
+    setValue(raw)
+    if (raw.trim()) {
+      const parsed = parseTaskInput(raw)
+      setPreview(parsed)
+    } else {
+      setPreview(null)
+    }
+  }
+
+  async function handleKeyDown(e) {
+    if (e.key !== 'Enter' || !value.trim() || adding) return
+    e.preventDefault()
+    setAdding(true)
+    const { title, priority, labels, due_date } = parseTaskInput(value)
+    if (!title) { setAdding(false); return }
+
+    // Upsert any new labels into the library
+    if (labels.length > 0) {
+      await Promise.all(labels.map(l =>
+        supabase.from('value_library')
+          .upsert({ brand_id: brandId, type: 'task_label', value: l }, { onConflict: 'brand_id,type,value' })
+      ))
+    }
+
+    const { data } = await supabase.from('tasks')
+      .insert({ brand_id: brandId, title, priority, labels, due_date, status: 'open' })
+      .select().single()
+
+    setValue('')
+    setPreview(null)
+    setAdding(false)
+    inputRef.current?.focus()
+    if (data) onAdded(data)
+  }
+
+  return (
+    <div className="quick-add-bar">
+      <input
+        ref={inputRef}
+        className="quick-add-input"
+        type="text"
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder="Add a task… use #label, p1/p2/p3, and dates like 'tomorrow' or 'next Monday'"
+        disabled={adding}
+        autoComplete="off"
+      />
+      {preview && preview.title && (
+        <div className="quick-add-preview">
+          <span className="quick-add-preview-title">{preview.title}</span>
+          {preview.priority !== 'medium' && (
+            <span className={`quick-add-preview-chip quick-add-preview-chip--${preview.priority}`}>
+              {preview.priority}
+            </span>
+          )}
+          {preview.due_date && (
+            <span className="quick-add-preview-chip">{formatDueDate(preview.due_date)}</span>
+          )}
+          {preview.labels.map(l => (
+            <span key={l} className="quick-add-preview-chip">{l}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Tasks() {
   const { activeBrand } = useBrand()
-  const [tasks, setTasks]         = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [filter, setFilter]       = useState('all')
-  const [panelOpen, setPanelOpen] = useState(false)
-  const [editingTask, setEditingTask] = useState(null)
+  const navigate = useNavigate()
+  const [tasks, setTasks]     = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter]   = useState('all')
 
   useEffect(() => {
     if (!activeBrand.id) return
@@ -64,22 +140,13 @@ export default function Tasks() {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
   }
 
-  function handleSave(saved, mode) {
-    setTasks(prev =>
-      mode === 'insert' ? [...prev, saved] : prev.map(t => t.id === saved.id ? saved : t)
-    )
+  function handleAdded(task) {
+    setTasks(prev => [task, ...prev])
   }
 
-  function handleDelete(id) { setTasks(prev => prev.filter(t => t.id !== id)) }
-  function openAdd()         { setEditingTask(null); setPanelOpen(true) }
-  function openEdit(task)    { setEditingTask(task); setPanelOpen(true) }
-
-  // Unique labels across all tasks for this brand
   const allLabels = [...new Set(tasks.flatMap(t => t.labels ?? []))].sort()
-
   const activeLabel = filter.startsWith('label:') ? filter.slice(6) : null
 
-  // Reset label filter if that label no longer exists in any task
   useEffect(() => {
     if (activeLabel && !allLabels.includes(activeLabel)) setFilter('all')
   }, [allLabels.join(',')])
@@ -100,8 +167,9 @@ export default function Tasks() {
     <div className="tasks-page">
       <div className="page-header">
         <h1 className="page-title">Tasks</h1>
-        <button className="btn-add" onClick={openAdd}>+ Add task</button>
       </div>
+
+      <QuickAddBar brandId={activeBrand.id} onAdded={handleAdded} />
 
       <FilterPills options={PRIORITY_FILTERS} active={filter} onChange={setFilter} />
 
@@ -127,14 +195,13 @@ export default function Tasks() {
           <span className="empty-text">
             {filter === 'all' ? 'No tasks yet' : 'No tasks match this filter'}
           </span>
-          {filter === 'all' && <button className="btn-add" onClick={openAdd}>+ Add task</button>}
         </div>
       ) : (
         <div className="task-list">
           {filtered.map(task => (
             <div key={task.id} className="task-card-row">
               <TaskCheckbox checked={task.status === 'done'} onChange={() => toggleTask(task)} />
-              <div className="task-card-content" onClick={() => openEdit(task)}>
+              <div className="task-card-content" onClick={() => navigate(`/tasks/${task.id}`)}>
                 <div className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
                   {task.title}
                 </div>
@@ -151,16 +218,6 @@ export default function Tasks() {
             </div>
           ))}
         </div>
-      )}
-
-      {panelOpen && (
-        <TaskPanel
-          task={editingTask}
-          brandId={activeBrand.id}
-          onSave={handleSave}
-          onDelete={handleDelete}
-          onClose={() => setPanelOpen(false)}
-        />
       )}
     </div>
   )
