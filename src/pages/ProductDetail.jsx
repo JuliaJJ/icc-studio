@@ -18,6 +18,39 @@ const ALL_TABS = [
 
 const NEXT_STATUS = { idea: 'in_progress', in_progress: 'ready', ready: 'live' }
 
+const PLATFORM_MEDIA_SPECS = {
+  Etsy: {
+    maxImages: 10, maxVideos: 1,
+    hint: 'Up to 10 images (min 570 px, 2000×2000 rec.) · 1 video (5–15 s, min 720p, max 100 MB)',
+    accepts: 'image/*,video/mp4,video/quicktime',
+  },
+  KDP: {
+    maxImages: 1, maxVideos: 0,
+    hint: 'Cover image (KDP generates the final composite from your uploaded cover file)',
+    accepts: 'image/*',
+  },
+  Gumroad: {
+    maxImages: 5, maxVideos: 0,
+    hint: 'Cover + additional images (1280×720 px or 1:1 recommended)',
+    accepts: 'image/*',
+  },
+  'Stan Store': {
+    maxImages: 3, maxVideos: 0,
+    hint: 'Cover image (1:1 recommended)',
+    accepts: 'image/*',
+  },
+  Pinterest: {
+    maxImages: 5, maxVideos: 1,
+    hint: '2:3 ratio (1000×1500 px rec.) · Video pins up to 15 min',
+    accepts: 'image/*,video/mp4,video/quicktime',
+  },
+  Social: {
+    maxImages: 10, maxVideos: 5,
+    hint: '1:1 for grid · 4:5 for feed · 9:16 for stories/reels',
+    accepts: 'image/*,video/mp4,video/quicktime',
+  },
+}
+
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
 function CopyButton({ text }) {
@@ -246,6 +279,120 @@ function KeywordLibraryPicker({ brandId, productNiche, currentKeywords, onAdd, o
   )
 }
 
+// ─── Per-platform media grid ──────────────────────────────────────────────────
+
+function ProductAssets({ productId, brandId, platform, spec, assets, onAdd, onRemove }) {
+  const [uploading, setUploading] = useState(false)
+  const [signedUrls, setSignedUrls] = useState({})
+  const fileInputRef = useRef(null)
+
+  const imageAssets = assets.filter(a => a.media_type === 'image')
+  const videoAssets = assets.filter(a => a.media_type === 'video')
+  const canAddMore = imageAssets.length < spec.maxImages || (spec.maxVideos > 0 && videoAssets.length < spec.maxVideos)
+
+  useEffect(() => {
+    const missing = assets.filter(a => !signedUrls[a.id])
+    if (!missing.length) return
+    Promise.all(
+      missing.map(a =>
+        supabase.storage.from('icc-assets').createSignedUrl(a.file_url, 3600)
+          .then(({ data }) => [a.id, data?.signedUrl])
+      )
+    ).then(pairs => {
+      setSignedUrls(prev => {
+        const next = { ...prev }
+        pairs.forEach(([assetId, url]) => { if (url) next[assetId] = url })
+        return next
+      })
+    })
+  }, [assets])
+
+  async function handleUpload(e) {
+    const files = [...(e.target.files ?? [])]
+    if (!files.length) return
+    setUploading(true)
+    for (const file of files) {
+      const isVideo = file.type.startsWith('video/')
+      const mediaType = isVideo ? 'video' : 'image'
+      const currentCount = isVideo ? videoAssets.length : imageAssets.length
+      const maxCount = isVideo ? spec.maxVideos : spec.maxImages
+      if (currentCount >= maxCount) continue
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = `products/${brandId}/${productId}/${platform}-${Date.now()}-${safeName}`
+      const { error } = await supabase.storage.from('icc-assets').upload(path, file)
+      if (!error) {
+        const { data } = await supabase.from('product_assets').insert({
+          product_id: productId,
+          brand_id: brandId,
+          platform,
+          media_type: mediaType,
+          file_url: path,
+          sort_order: assets.length,
+        }).select().single()
+        if (data) onAdd(data)
+      }
+    }
+    setUploading(false)
+    e.target.value = ''
+  }
+
+  async function handleRemove(asset) {
+    if (!confirm('Remove this file?')) return
+    await supabase.storage.from('icc-assets').remove([asset.file_url])
+    await supabase.from('product_assets').delete().eq('id', asset.id)
+    onRemove(asset.id)
+  }
+
+  return (
+    <div className="product-detail-section">
+      <div className="product-media-header">
+        <span className="product-detail-section-title">Media</span>
+        <span className="product-media-spec-hint">{spec.hint}</span>
+      </div>
+      <div className="product-media-grid">
+        {assets.map(asset => (
+          <div key={asset.id} className="product-media-thumb">
+            {asset.media_type === 'video' ? (
+              <div className="product-media-video-thumb">
+                <span className="product-media-video-icon">▶</span>
+                <span className="product-media-video-label">Video</span>
+              </div>
+            ) : signedUrls[asset.id] ? (
+              <img src={signedUrls[asset.id]} alt="" />
+            ) : (
+              <div className="product-media-loading" />
+            )}
+            <button
+              type="button"
+              className="product-media-remove"
+              onClick={() => handleRemove(asset)}
+              title="Remove"
+            >×</button>
+          </div>
+        ))}
+        {canAddMore && (
+          <button
+            type="button"
+            className="product-media-add"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <span className="product-media-uploading" /> : <span>+</span>}
+          </button>
+        )}
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={spec.accepts}
+        style={{ display: 'none' }}
+        onChange={handleUpload}
+      />
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ProductDetail() {
@@ -261,6 +408,7 @@ export default function ProductDetail() {
   const [imageUrl, setImageUrl] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [linkedAssets, setLinkedAssets] = useState([])
+  const [productAssets, setProductAssets] = useState([])
   const [libraryPickerOpen, setLibraryPickerOpen] = useState(false)
   const imageInputRef = useRef(null)
 
@@ -329,6 +477,9 @@ export default function ProductDetail() {
 
     supabase.from('asset_product_links').select('id, assets(id, filename, role)').eq('product_id', id)
       .then(({ data }) => setLinkedAssets((data ?? []).map(r => r.assets).filter(Boolean)))
+
+    supabase.from('product_assets').select('*').eq('product_id', id).order('sort_order').order('created_at')
+      .then(({ data }) => setProductAssets(data ?? []))
   }, [id])
 
   function setField(field) {
@@ -352,6 +503,10 @@ export default function ProductDetail() {
   }
 
   function setPcField(tab, field) { return e => setPc(tab, field, e.target.value) }
+
+  function assetsFor(platform) { return productAssets.filter(a => a.platform === platform) }
+  function handleAssetAdded(asset) { setProductAssets(prev => [...prev, asset]) }
+  function handleAssetRemoved(assetId) { setProductAssets(prev => prev.filter(a => a.id !== assetId)) }
 
   async function handleSave(e) {
     e.preventDefault()
@@ -561,6 +716,11 @@ export default function ProductDetail() {
         {/* ── Etsy tab ────────────────────────────────────────────────────── */}
         {activeTab === 'Etsy' && (
           <div className="product-tab-content">
+            <ProductAssets
+              productId={id} brandId={activeBrand.id} platform="Etsy"
+              spec={PLATFORM_MEDIA_SPECS.Etsy}
+              assets={assetsFor('Etsy')} onAdd={handleAssetAdded} onRemove={handleAssetRemoved}
+            />
             <div className="product-detail-section">
               <LabelRow label="Listing title" extra={<span className={`char-count ${pc.etsy.listing_title.length > 120 ? 'char-count--warn' : ''}`}>{pc.etsy.listing_title.length}/140</span>} copyText={pc.etsy.listing_title} />
               <input className="form-input" type="text" maxLength={140} value={pc.etsy.listing_title} onChange={setPcField('etsy', 'listing_title')} placeholder="SEO-optimized listing title…" />
@@ -586,6 +746,11 @@ export default function ProductDetail() {
         {/* ── KDP tab ─────────────────────────────────────────────────────── */}
         {activeTab === 'KDP' && (
           <div className="product-tab-content">
+            <ProductAssets
+              productId={id} brandId={activeBrand.id} platform="KDP"
+              spec={PLATFORM_MEDIA_SPECS.KDP}
+              assets={assetsFor('KDP')} onAdd={handleAssetAdded} onRemove={handleAssetRemoved}
+            />
             <div className="product-detail-section">
               <LabelRow label="Subtitle" />
               <input className="form-input" type="text" value={pc.kdp.subtitle} onChange={setPcField('kdp', 'subtitle')} placeholder="Book subtitle…" />
@@ -617,6 +782,11 @@ export default function ProductDetail() {
         {/* ── Gumroad tab ─────────────────────────────────────────────────── */}
         {activeTab === 'Gumroad' && (
           <div className="product-tab-content">
+            <ProductAssets
+              productId={id} brandId={activeBrand.id} platform="Gumroad"
+              spec={PLATFORM_MEDIA_SPECS.Gumroad}
+              assets={assetsFor('Gumroad')} onAdd={handleAssetAdded} onRemove={handleAssetRemoved}
+            />
             <div className="product-detail-section">
               <LabelRow label="Headline" copyText={pc.gumroad.headline} />
               <input className="form-input" type="text" value={pc.gumroad.headline} onChange={setPcField('gumroad', 'headline')} placeholder="Short hook for the product page…" />
@@ -637,6 +807,11 @@ export default function ProductDetail() {
         {/* ── Stan Store tab ───────────────────────────────────────────────── */}
         {activeTab === 'Stan Store' && (
           <div className="product-tab-content">
+            <ProductAssets
+              productId={id} brandId={activeBrand.id} platform="Stan Store"
+              spec={PLATFORM_MEDIA_SPECS['Stan Store']}
+              assets={assetsFor('Stan Store')} onAdd={handleAssetAdded} onRemove={handleAssetRemoved}
+            />
             <div className="product-detail-section">
               <LabelRow label="Headline" copyText={pc.stan_store.headline} />
               <input className="form-input" type="text" value={pc.stan_store.headline} onChange={setPcField('stan_store', 'headline')} placeholder="Short hook for the product page…" />
@@ -657,6 +832,11 @@ export default function ProductDetail() {
         {/* ── Pinterest tab ────────────────────────────────────────────────── */}
         {activeTab === 'Pinterest' && (
           <div className="product-tab-content">
+            <ProductAssets
+              productId={id} brandId={activeBrand.id} platform="Pinterest"
+              spec={PLATFORM_MEDIA_SPECS.Pinterest}
+              assets={assetsFor('Pinterest')} onAdd={handleAssetAdded} onRemove={handleAssetRemoved}
+            />
             <div className="product-detail-section">
               <LabelRow label="Pin title" extra={<span className={`char-count ${pc.pinterest.pin_title.length > 90 ? 'char-count--warn' : ''}`}>{pc.pinterest.pin_title.length}/100</span>} copyText={pc.pinterest.pin_title} />
               <input className="form-input" type="text" maxLength={100} value={pc.pinterest.pin_title} onChange={setPcField('pinterest', 'pin_title')} placeholder="Attention-grabbing pin title…" />
@@ -677,6 +857,11 @@ export default function ProductDetail() {
         {/* ── Social tab ───────────────────────────────────────────────────── */}
         {activeTab === 'Social' && (
           <div className="product-tab-content">
+            <ProductAssets
+              productId={id} brandId={activeBrand.id} platform="Social"
+              spec={PLATFORM_MEDIA_SPECS.Social}
+              assets={assetsFor('Social')} onAdd={handleAssetAdded} onRemove={handleAssetRemoved}
+            />
             <div className="product-detail-section">
               <LabelRow label="Caption" copyText={pc.social.caption} />
               <textarea className="form-textarea" rows={6} value={pc.social.caption} onChange={setPcField('social', 'caption')} placeholder="Instagram / Facebook / TikTok caption…" />

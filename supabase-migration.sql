@@ -333,6 +333,31 @@ alter table brands add column if not exists platform_tabs text[] default '{"Etsy
 alter table products add column if not exists platform_content jsonb default '{}'::jsonb;
 
 
+-- ─── product_assets ──────────────────────────────────────────────────────────
+-- Per-platform media files attached to a product (separate from the design
+-- asset library). Each row is one image or video for a specific platform.
+
+create table if not exists product_assets (
+  id          uuid primary key default gen_random_uuid(),
+  product_id  uuid not null references products(id) on delete cascade,
+  brand_id    uuid not null references brands(id) on delete cascade,
+  platform    text not null,
+  media_type  text not null default 'image' check (media_type in ('image', 'video')),
+  file_url    text not null,
+  label       text,
+  sort_order  integer default 0,
+  created_at  timestamptz not null default now()
+);
+
+alter table product_assets enable row level security;
+
+create policy "Authenticated users can manage product_assets"
+  on product_assets for all
+  to authenticated
+  using (true)
+  with check (true);
+
+
 -- ─── Storage bucket ───────────────────────────────────────────────────────────
 -- Run this separately in the Storage tab, or uncomment if your plan allows SQL storage ops:
 -- insert into storage.buckets (id, name, public) values ('icc-assets', 'icc-assets', false);
