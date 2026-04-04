@@ -53,6 +53,18 @@ export const NICHES = [
   'Accessories',
 ]
 
+export const NICHE_COLORS = {
+  'Wall Art':           { bg: '#FEE2D5', color: '#92320C' },
+  'Desk/Workspace Art': { bg: '#DBEAFE', color: '#1E40AF' },
+  'Phone Wallpapers':   { bg: '#EDE9FE', color: '#5B21B6' },
+  'Greeting Cards':     { bg: '#FCE7F3', color: '#9D174D' },
+  'Stationery':         { bg: '#CCFBF1', color: '#0F766E' },
+  'Postcards':          { bg: '#FEF3C7', color: '#92400E' },
+  'Wearables':          { bg: '#E0E7FF', color: '#3730A3' },
+  'Home Textiles':      { bg: '#ECFCCB', color: '#365314' },
+  'Accessories':        { bg: '#FFE4E6', color: '#9F1239' },
+}
+
 export const PLATFORMS = ['Etsy', 'Printify', 'KDP', 'Gumroad', 'Stan Store', 'Kittl']
 
 export const EVENT_TYPES = {

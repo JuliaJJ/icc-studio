@@ -700,6 +700,255 @@ a {
   text-decoration: underline;
 }
 
+/* ─── Task template builder (Settings) ────────────────────────────────────── */
+
+.tpl-card {
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.tpl-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tpl-card-header:hover {
+  background: var(--color-surface-hover);
+}
+
+.tpl-expand-icon {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.tpl-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.tpl-name-input {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-bottom: 1.5px solid var(--brand-accent);
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  padding: 0 2px;
+}
+
+.tpl-item-count {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.tpl-delete-btn {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 100ms, background 100ms;
+}
+
+.tpl-delete-btn:hover {
+  color: #B91C1C;
+  background: #FEE2E2;
+}
+
+.tpl-card-body {
+  border-top: 0.5px solid var(--color-border-tertiary);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tpl-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--color-surface-hover);
+}
+
+.tpl-item-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.tpl-item-title {
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.tpl-item-priority {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 8px;
+}
+
+.tpl-item-priority--high   { background: #FEE2E2; color: #991B1B; }
+.tpl-item-priority--medium { background: #FEF3C7; color: #92400E; }
+.tpl-item-priority--low    { background: #F0FDF4; color: #166534; }
+
+.tpl-item-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.tpl-item-btn {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 100ms;
+}
+
+.tpl-item-btn:hover:not(:disabled) { background: var(--color-border-tertiary); }
+.tpl-item-btn:disabled { opacity: 0.3; }
+.tpl-item-btn--danger:hover:not(:disabled) { background: #FEE2E2; color: #B91C1C; }
+
+.tpl-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tpl-add-title { flex: 1; font-size: 13px; }
+.tpl-add-priority { width: 110px; font-size: 13px; }
+
+.tpl-empty {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.tpl-empty-state {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 16px;
+}
+
+/* ─── Product pill (task rows) ─────────────────────────────────────────────── */
+
+.product-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.task-template-icon {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  line-height: 1;
+}
+
+/* ─── Catalog archive button ───────────────────────────────────────────────── */
+
+.btn-ghost {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 7px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: background 100ms;
+}
+
+.btn-ghost:hover {
+  background: var(--color-surface-hover);
+}
+
+/* ─── Checklist tab ────────────────────────────────────────────────────────── */
+
+.checklist-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checklist-template-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.checklist-applied-label {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: -8px;
+}
+
+.checklist-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checklist-empty {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.checklist-task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  transition: background 100ms;
+}
+
+.checklist-task-row:hover {
+  background: var(--color-surface-hover);
+}
+
+.checklist-task-content {
+  flex: 1;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.checklist-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* ─── Page header (shared) ──────────────────────────────────────────── */
 .page-header {
   display: flex;

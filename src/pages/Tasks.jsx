@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import FilterPills from '../components/FilterPills'
 import { parseTaskInput } from '../lib/taskNlp'
+import { NICHE_COLORS } from '../lib/constants'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
@@ -40,6 +41,15 @@ function TaskCheckbox({ checked, onChange }) {
 
 function PriorityDot({ priority }) {
   return <span className={`priority-dot priority-dot--${priority}`} />
+}
+
+function ProductPill({ name, niche }) {
+  const c = NICHE_COLORS[niche] ?? { bg: '#F1EFE8', color: '#444441' }
+  return (
+    <span className="product-pill" style={{ background: c.bg, color: c.color }}>
+      {name}
+    </span>
+  )
 }
 
 function QuickAddBar({ brandId, onAdded }) {
@@ -130,8 +140,12 @@ export default function Tasks() {
   useEffect(() => {
     if (!activeBrand.id) return
     setLoading(true)
-    supabase.from('tasks').select('*').eq('brand_id', activeBrand.id).order('created_at')
-      .then(({ data }) => { setTasks(data ?? []); setLoading(false) })
+    supabase.from('tasks').select('*, products(id, name, niche, is_archived)')
+      .eq('brand_id', activeBrand.id).order('created_at')
+      .then(({ data }) => {
+        setTasks((data ?? []).filter(t => !t.products?.is_archived))
+        setLoading(false)
+      })
   }, [activeBrand.id])
 
   async function toggleTask(task) {
@@ -206,6 +220,10 @@ export default function Tasks() {
                   {task.title}
                 </div>
                 <div className="task-meta">
+                  {task.products && (
+                    <ProductPill name={task.products.name} niche={task.products.niche} />
+                  )}
+                  {task.template_item_id && <span className="task-template-icon" title="Generated from template">⊞</span>}
                   {(task.labels ?? []).map(l => (
                     <span key={l} className="task-label-tag">{l}</span>
                   ))}

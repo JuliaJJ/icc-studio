@@ -3,11 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import { PRODUCT_STATUS, productEmoji, NICHES, PRODUCT_TIERS, FULFILLMENT_OPTIONS } from '../lib/constants'
+import { normalizeLabel } from '../lib/taskNlp'
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
 const ALL_TABS = [
   { id: 'overview',   label: 'Overview',   alwaysOn: true },
+  { id: 'checklist',  label: 'Checklist',  alwaysOn: true },
   { id: 'Etsy',       label: 'Etsy' },
   { id: 'KDP',        label: 'KDP' },
   { id: 'Gumroad',    label: 'Gumroad' },
@@ -604,6 +606,165 @@ function ProductAssets({ productId, brandId, platform, spec, assets, onAdd, onRe
   )
 }
 
+// ─── Checklist tab ────────────────────────────────────────────────────────────
+
+async function generateTasksFromTemplate(templateId, productId, brandId) {
+  const { data: items } = await supabase.from('task_template_items').select('*')
+    .eq('template_id', templateId).order('sort_order').order('created_at')
+  if (!items?.length) return []
+  const { data } = await supabase.from('tasks').insert(
+    items.map(item => ({
+      brand_id:         brandId,
+      product_id:       productId,
+      template_item_id: item.id,
+      title:            item.title,
+      priority:         item.priority,
+      labels:           item.labels ?? [],
+      sort_order:       item.sort_order,
+      status:           'open',
+    }))
+  ).select()
+  return data ?? []
+}
+
+function sortChecklistTasks(tasks) {
+  const withDate    = tasks.filter(t => t.due_date).sort((a, b) => a.due_date.localeCompare(b.due_date))
+  const withoutDate = tasks.filter(t => !t.due_date)
+  const fromTpl     = withoutDate.filter(t => t.template_item_id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  const adHoc       = withoutDate.filter(t => !t.template_item_id).sort((a, b) => a.created_at.localeCompare(b.created_at))
+  return [...withDate, ...fromTpl, ...adHoc]
+}
+
+function ChecklistTab({ productId, brandId, templateId: initialTemplateId, onTemplateChange }) {
+  const navigate = useNavigate()
+  const [tasks, setTasks]               = useState([])
+  const [templates, setTemplates]       = useState([])
+  const [templateId, setTemplateId]     = useState(initialTemplateId ?? '')
+  const [appliedTpl, setAppliedTpl]     = useState(null)
+  const [loading, setLoading]           = useState(true)
+  const [applying, setApplying]         = useState(false)
+  const [newTitle, setNewTitle]         = useState('')
+  const [addingTask, setAddingTask]     = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from('tasks').select('*').eq('product_id', productId).order('created_at'),
+      supabase.from('task_templates').select('id, name').eq('brand_id', brandId).order('name'),
+    ]).then(([{ data: t }, { data: tpl }]) => {
+      setTasks(t ?? [])
+      setTemplates(tpl ?? [])
+      if (initialTemplateId) {
+        const match = (tpl ?? []).find(x => x.id === initialTemplateId)
+        setAppliedTpl(match ?? null)
+      }
+      setLoading(false)
+    })
+  }, [productId, brandId])
+
+  async function applyTemplate(overwrite = false) {
+    const templateTasks = tasks.filter(t => t.template_item_id)
+    if (templateTasks.length > 0 && !overwrite) {
+      const count = templateTasks.length
+      if (!confirm(`This product already has ${count} template-generated task${count !== 1 ? 's' : ''}. Replace them with the new template?`)) return
+    }
+    setApplying(true)
+    if (templateTasks.length > 0) {
+      await supabase.from('tasks').delete().in('id', templateTasks.map(t => t.id))
+    }
+    const newTasks = await generateTasksFromTemplate(templateId, productId, brandId)
+    await supabase.from('products').update({ template_id: templateId }).eq('id', productId)
+    const match = templates.find(t => t.id === templateId)
+    setAppliedTpl(match ?? null)
+    setTasks(prev => [...prev.filter(t => !t.template_item_id), ...newTasks])
+    onTemplateChange(templateId)
+    setApplying(false)
+  }
+
+  async function toggleTask(task) {
+    const newStatus = task.status === 'done' ? 'open' : 'done'
+    await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id)
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
+  }
+
+  async function addTask(e) {
+    e.preventDefault()
+    if (!newTitle.trim()) return
+    setAddingTask(true)
+    const { data } = await supabase.from('tasks').insert({
+      brand_id: brandId, product_id: productId,
+      title: newTitle.trim(), status: 'open', priority: 'medium',
+    }).select().single()
+    if (data) setTasks(prev => [...prev, data])
+    setNewTitle('')
+    setAddingTask(false)
+  }
+
+  if (loading) return <div className="loading-state">Loading…</div>
+
+  const sorted = sortChecklistTasks(tasks)
+
+  return (
+    <div className="checklist-tab">
+      <div className="checklist-template-row">
+        <select className="form-select" value={templateId} onChange={e => setTemplateId(e.target.value)}
+          style={{ flex: 1 }}>
+          <option value="">— select template —</option>
+          {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <button type="button" className="library-add-btn" disabled={!templateId || applying}
+          onClick={() => applyTemplate()}>
+          {applying ? 'Applying…' : appliedTpl ? 'Change' : 'Apply'}
+        </button>
+      </div>
+      {appliedTpl && (
+        <div className="checklist-applied-label">Template: <strong>{appliedTpl.name}</strong></div>
+      )}
+
+      <div className="checklist-task-list">
+        {sorted.length === 0 && <div className="checklist-empty">No tasks yet — apply a template or add one below.</div>}
+        {sorted.map(task => (
+          <div key={task.id} className="checklist-task-row">
+            <button
+              type="button"
+              className={`task-checkbox ${task.status === 'done' ? 'task-checkbox--checked' : ''}`}
+              onClick={() => toggleTask(task)}
+              aria-label={task.status === 'done' ? 'Mark open' : 'Mark done'}
+            >
+              {task.status === 'done' && (
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+            <div className="checklist-task-content" onClick={() => navigate(`/tasks/${task.id}`)}>
+              <span className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
+                {task.title}
+              </span>
+              <div className="task-meta">
+                {task.template_item_id && <span className="task-template-icon" title="Generated from template">⊞</span>}
+                {(task.labels ?? []).map(l => <span key={l} className="task-label-tag">{l}</span>)}
+                {task.due_date && <span className="task-due">{task.due_date}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form className="checklist-add-row" onSubmit={addTask}>
+        <input
+          className="form-input"
+          type="text"
+          value={newTitle}
+          onChange={e => setNewTitle(e.target.value)}
+          placeholder="Add a task…"
+          disabled={addingTask}
+        />
+        <button type="submit" className="library-add-btn" disabled={!newTitle.trim() || addingTask}>Add</button>
+      </form>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ProductDetail() {
@@ -632,6 +793,7 @@ export default function ProductDetail() {
           name:               data?.name               ?? '',
           status:             data?.status             ?? 'idea',
           is_bundle:          data?.is_bundle          ?? false,
+          template_id:        data?.template_id        ?? null,
           niche:              data?.niche              ?? '',
           tier:               data?.tier               ?? '',
           theme:              data?.theme              ?? '',
@@ -743,6 +905,16 @@ export default function ProductDetail() {
   async function handleDelete() {
     if (!confirm('Delete this product? This cannot be undone.')) return
     await supabase.from('products').delete().eq('id', id)
+    navigate('/catalog')
+  }
+
+  async function handleArchive() {
+    const isArchived = product?.is_archived
+    const msg = isArchived
+      ? 'Restore this product to your active catalog?'
+      : 'Archive this product? Its tasks will be hidden from the master task list.'
+    if (!confirm(msg)) return
+    await supabase.from('products').update({ is_archived: !isArchived }).eq('id', id)
     navigate('/catalog')
   }
 
@@ -858,6 +1030,16 @@ export default function ProductDetail() {
             </button>
           ))}
         </div>
+
+        {/* ── Checklist tab ───────────────────────────────────────────────── */}
+        {activeTab === 'checklist' && (
+          <ChecklistTab
+            productId={id}
+            brandId={activeBrand.id}
+            templateId={form.template_id}
+            onTemplateChange={tid => setDirect('template_id', tid)}
+          />
+        )}
 
         {/* ── Overview tab ────────────────────────────────────────────────── */}
         {activeTab === 'overview' && (
@@ -1159,7 +1341,12 @@ export default function ProductDetail() {
 
         {/* ── Save bar ─────────────────────────────────────────────────────── */}
         <div className="product-save-bar">
-          <button type="button" className="btn-danger" onClick={handleDelete}>Delete product</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn-ghost" onClick={handleArchive}>
+              {product?.is_archived ? 'Restore' : 'Archive'}
+            </button>
+            <button type="button" className="btn-danger" onClick={handleDelete}>Delete</button>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {saved && <span className="settings-saved">Saved</span>}
             <button type="submit" className="btn-primary" disabled={saving}>

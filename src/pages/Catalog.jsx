@@ -5,6 +5,24 @@ import { useBrand } from '../context/BrandContext'
 import FilterPills from '../components/FilterPills'
 import { PRODUCT_STATUS, productEmoji, NICHES } from '../lib/constants'
 
+async function generateTasksFromTemplate(templateId, productId, brandId) {
+  const { data: items } = await supabase.from('task_template_items').select('*')
+    .eq('template_id', templateId).order('sort_order').order('created_at')
+  if (!items?.length) return
+  await supabase.from('tasks').insert(
+    items.map(item => ({
+      brand_id:         brandId,
+      product_id:       productId,
+      template_item_id: item.id,
+      title:            item.title,
+      priority:         item.priority,
+      labels:           item.labels ?? [],
+      sort_order:       item.sort_order,
+      status:           'open',
+    }))
+  )
+}
+
 function StatusBadge({ status }) {
   const cfg = PRODUCT_STATUS[status]
   if (!cfg) return null
@@ -18,17 +36,26 @@ function StatusBadge({ status }) {
 function AddProductPanel({ brandId, onSave, onClose }) {
   const [form, setForm] = useState({ name: '', niche: '', status: 'idea', is_bundle: false })
   const [saving, setSaving] = useState(false)
+  const [includeChecklist, setIncludeChecklist] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState('')
+  const [templates, setTemplates] = useState([])
+
+  useEffect(() => {
+    supabase.from('task_templates').select('id, name').eq('brand_id', brandId).order('name')
+      .then(({ data }) => setTemplates(data ?? []))
+  }, [brandId])
 
   function setField(f) { return e => setForm(p => ({ ...p, [f]: e.target.value })) }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setSaving(true)
+    const templateId = includeChecklist && selectedTemplate ? selectedTemplate : null
     const { data } = await supabase
       .from('products')
-      .insert({ ...form, brand_id: brandId })
-      .select()
-      .single()
+      .insert({ ...form, brand_id: brandId, template_id: templateId || null })
+      .select().single()
+    if (data && templateId) await generateTasksFromTemplate(templateId, data.id, brandId)
     setSaving(false)
     if (data) { onSave(data); onClose() }
   }
@@ -64,18 +91,29 @@ function AddProductPanel({ brandId, onSave, onClose }) {
             </select>
           </div>
           <div className="form-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              id="is_bundle"
-              checked={form.is_bundle}
-              onChange={e => setForm(p => ({ ...p, is_bundle: e.target.checked }))}
-            />
+            <input type="checkbox" id="is_bundle" checked={form.is_bundle}
+              onChange={e => setForm(p => ({ ...p, is_bundle: e.target.checked }))} />
             <label htmlFor="is_bundle" className="form-label" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, fontSize: 13 }}>
               This is a bundle product
             </label>
           </div>
+          <div className="form-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <input type="checkbox" id="include_checklist" checked={includeChecklist}
+              onChange={e => setIncludeChecklist(e.target.checked)} />
+            <label htmlFor="include_checklist" className="form-label" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, fontSize: 13 }}>
+              Include checklist
+            </label>
+          </div>
+          {includeChecklist && (
+            <div className="form-field">
+              <select className="form-select" value={selectedTemplate} onChange={e => setSelectedTemplate(e.target.value)}>
+                <option value="">— select template —</option>
+                {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          )}
           <div className="panel-actions">
-            <button type="submit" className="btn-primary" disabled={saving}>
+            <button type="submit" className="btn-primary" disabled={saving || (includeChecklist && !selectedTemplate)}>
               {saving ? 'Creating…' : 'Create & edit'}
             </button>
           </div>
@@ -91,6 +129,7 @@ export default function Catalog() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [showArchived, setShowArchived] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
 
   useEffect(() => {
@@ -98,22 +137,20 @@ export default function Catalog() {
     setLoading(true)
     supabase
       .from('products')
-      .select('id, name, niche, status, image_urls, is_bundle')
+      .select('id, name, niche, status, image_urls, is_bundle, is_archived')
       .eq('brand_id', activeBrand.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setProducts(data ?? [])
-        setLoading(false)
-      })
+      .then(({ data }) => { setProducts(data ?? []); setLoading(false) })
   }, [activeBrand.id])
 
-  const niches = [...new Set(products.map(p => p.niche).filter(Boolean))]
+  const visible = products.filter(p => showArchived ? p.is_archived : !p.is_archived)
+  const niches = [...new Set(visible.map(p => p.niche).filter(Boolean))]
   const filterOptions = [
     { value: 'all', label: 'All' },
     ...niches.map(n => ({ value: n, label: n })),
   ]
 
-  const filtered = filter === 'all' ? products : products.filter(p => p.niche === filter)
+  const filtered = filter === 'all' ? visible : visible.filter(p => p.niche === filter)
 
   function handleProductCreated(product) {
     navigate(`/catalog/${product.id}`)
@@ -125,7 +162,12 @@ export default function Catalog() {
     <div className="catalog-page">
       <div className="page-header">
         <h1 className="page-title">Catalog</h1>
-        <button className="btn-add" onClick={() => setPanelOpen(true)}>+ Add product</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn-ghost" onClick={() => setShowArchived(x => !x)}>
+            {showArchived ? 'Hide archived' : 'Show archived'}
+          </button>
+          {!showArchived && <button className="btn-add" onClick={() => setPanelOpen(true)}>+ Add product</button>}
+        </div>
       </div>
 
       <FilterPills options={filterOptions} active={filter} onChange={setFilter} />

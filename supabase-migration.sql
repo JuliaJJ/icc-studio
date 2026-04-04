@@ -426,3 +426,44 @@ alter table launch_events drop constraint if exists launch_events_status_check;
 
 -- Make the legacy launch_date column nullable so new inserts don't require it
 alter table launch_events alter column launch_date drop not null;
+
+
+-- ─── Checklist templates ─────────────────────────────────────────────────────
+
+create table if not exists task_templates (
+  id         uuid primary key default gen_random_uuid(),
+  brand_id   uuid not null references brands(id) on delete cascade,
+  name       text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table task_templates enable row level security;
+create policy "Authenticated users can manage task_templates"
+  on task_templates for all to authenticated using (true) with check (true);
+
+create trigger trg_task_templates_updated_at
+  before update on task_templates
+  for each row execute function set_updated_at();
+
+
+create table if not exists task_template_items (
+  id          uuid primary key default gen_random_uuid(),
+  template_id uuid not null references task_templates(id) on delete cascade,
+  title       text not null,
+  priority    text not null default 'medium' check (priority in ('high', 'medium', 'low')),
+  labels      text[] default '{}',
+  sort_order  integer default 0,
+  created_at  timestamptz not null default now()
+);
+
+alter table task_template_items enable row level security;
+create policy "Authenticated users can manage task_template_items"
+  on task_template_items for all to authenticated using (true) with check (true);
+
+
+-- Link tasks and products to templates
+alter table tasks    add column if not exists product_id       uuid references products(id) on delete set null;
+alter table tasks    add column if not exists template_item_id uuid references task_template_items(id) on delete set null;
+alter table products add column if not exists template_id      uuid references task_templates(id) on delete set null;
+alter table products add column if not exists is_archived      boolean default false;

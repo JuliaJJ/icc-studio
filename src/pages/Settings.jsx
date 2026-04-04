@@ -218,6 +218,202 @@ function LibrarySection({ brandId, type, label, hint }) {
   )
 }
 
+// ─── Task Templates tab ───────────────────────────────────────────────────────
+
+function TemplateItem({ item, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) {
+  return (
+    <div className="tpl-item-row">
+      <div className="tpl-item-main">
+        <span className="tpl-item-title">{item.title}</span>
+        <span className={`tpl-item-priority tpl-item-priority--${item.priority}`}>{item.priority}</span>
+        {(item.labels ?? []).map(l => (
+          <span key={l} className="task-label-tag">{l}</span>
+        ))}
+      </div>
+      <div className="tpl-item-actions">
+        <button type="button" className="tpl-item-btn" onClick={onMoveUp}  disabled={isFirst}>↑</button>
+        <button type="button" className="tpl-item-btn" onClick={onMoveDown} disabled={isLast}>↓</button>
+        <button type="button" className="tpl-item-btn tpl-item-btn--danger" onClick={onDelete}>×</button>
+      </div>
+    </div>
+  )
+}
+
+function TemplateEditor({ template, brandId, onUpdate, onDelete }) {
+  const [items, setItems] = useState([])
+  const [expanded, setExpanded] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newPriority, setNewPriority] = useState('medium')
+  const [editingName, setEditingName] = useState(false)
+  const [name, setName] = useState(template.name)
+
+  useEffect(() => {
+    if (!expanded) return
+    supabase.from('task_template_items').select('*')
+      .eq('template_id', template.id).order('sort_order').order('created_at')
+      .then(({ data }) => setItems(data ?? []))
+  }, [expanded, template.id])
+
+  async function saveName() {
+    setEditingName(false)
+    if (name.trim() === template.name) return
+    const trimmed = name.trim() || template.name
+    setName(trimmed)
+    await supabase.from('task_templates').update({ name: trimmed }).eq('id', template.id)
+    onUpdate({ ...template, name: trimmed })
+  }
+
+  async function addItem(e) {
+    e.preventDefault()
+    if (!newTitle.trim()) return
+    const sortOrder = items.length
+    const { data } = await supabase.from('task_template_items')
+      .insert({ template_id: template.id, title: newTitle.trim(), priority: newPriority, sort_order: sortOrder })
+      .select().single()
+    if (data) setItems(prev => [...prev, data])
+    setNewTitle('')
+    setNewPriority('medium')
+  }
+
+  async function deleteItem(id) {
+    await supabase.from('task_template_items').delete().eq('id', id)
+    setItems(prev => prev.filter(i => i.id !== id))
+  }
+
+  async function moveItem(index, dir) {
+    const swapIndex = index + dir
+    if (swapIndex < 0 || swapIndex >= items.length) return
+    const updated = [...items]
+    ;[updated[index], updated[swapIndex]] = [updated[swapIndex], updated[index]]
+    const reordered = updated.map((item, i) => ({ ...item, sort_order: i }))
+    setItems(reordered)
+    await Promise.all(reordered.map(item =>
+      supabase.from('task_template_items').update({ sort_order: item.sort_order }).eq('id', item.id)
+    ))
+  }
+
+  async function deleteTemplate() {
+    if (!confirm(`Delete template "${template.name}"? This cannot be undone.`)) return
+    await supabase.from('task_templates').delete().eq('id', template.id)
+    onDelete(template.id)
+  }
+
+  return (
+    <div className="tpl-card">
+      <div className="tpl-card-header" onClick={() => setExpanded(x => !x)}>
+        <span className="tpl-expand-icon">{expanded ? '▾' : '▸'}</span>
+        {editingName ? (
+          <input
+            className="tpl-name-input"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setName(template.name); setEditingName(false) } }}
+            autoFocus
+            onClick={e => e.stopPropagation()}
+          />
+        ) : (
+          <span className="tpl-name" onDoubleClick={e => { e.stopPropagation(); setEditingName(true) }}>
+            {name}
+          </span>
+        )}
+        <span className="tpl-item-count">{expanded ? '' : `${items.length || '…'} tasks`}</span>
+        <button type="button" className="tpl-delete-btn" onClick={e => { e.stopPropagation(); deleteTemplate() }}>Delete</button>
+      </div>
+
+      {expanded && (
+        <div className="tpl-card-body">
+          {items.length === 0 && <div className="tpl-empty">No tasks yet — add one below</div>}
+          {items.map((item, i) => (
+            <TemplateItem
+              key={item.id}
+              item={item}
+              onDelete={() => deleteItem(item.id)}
+              onMoveUp={() => moveItem(i, -1)}
+              onMoveDown={() => moveItem(i, 1)}
+              isFirst={i === 0}
+              isLast={i === items.length - 1}
+            />
+          ))}
+          <form className="tpl-add-row" onSubmit={addItem}>
+            <input
+              className="form-input tpl-add-title"
+              type="text"
+              value={newTitle}
+              onChange={e => setNewTitle(e.target.value)}
+              placeholder="New task title…"
+            />
+            <select className="form-select tpl-add-priority" value={newPriority} onChange={e => setNewPriority(e.target.value)}>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <button type="submit" className="library-add-btn" disabled={!newTitle.trim()}>Add</button>
+          </form>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TaskTemplates() {
+  const { activeBrand } = useBrand()
+  const [templates, setTemplates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [newName, setNewName] = useState('')
+
+  useEffect(() => {
+    if (!activeBrand.id) return
+    supabase.from('task_templates').select('*').eq('brand_id', activeBrand.id).order('created_at')
+      .then(({ data }) => { setTemplates(data ?? []); setLoading(false) })
+  }, [activeBrand.id])
+
+  async function createTemplate(e) {
+    e.preventDefault()
+    if (!newName.trim()) return
+    const { data } = await supabase.from('task_templates')
+      .insert({ brand_id: activeBrand.id, name: newName.trim() })
+      .select().single()
+    if (data) setTemplates(prev => [...prev, data])
+    setNewName('')
+  }
+
+  if (!activeBrand.id) return <div className="loading-state">No brand selected.</div>
+
+  return (
+    <div className="libraries-page">
+      <p className="libraries-intro">
+        Task templates for <strong>{activeBrand.name}</strong>. Apply a template when creating or editing a product to automatically generate a linked task list.
+      </p>
+
+      {loading ? <div className="loading-state">Loading…</div> : (
+        <>
+          {templates.length === 0 && <div className="tpl-empty-state">No templates yet — create one below.</div>}
+          {templates.map(t => (
+            <TemplateEditor
+              key={t.id}
+              template={t}
+              brandId={activeBrand.id}
+              onUpdate={updated => setTemplates(prev => prev.map(x => x.id === updated.id ? updated : x))}
+              onDelete={id => setTemplates(prev => prev.filter(x => x.id !== id))}
+            />
+          ))}
+          <form className="library-add-row" style={{ marginTop: 16 }} onSubmit={createTemplate}>
+            <input
+              className="form-input library-add-input"
+              type="text"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="New template name…"
+            />
+            <button type="submit" className="library-add-btn" disabled={!newName.trim()}>Create</button>
+          </form>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── Manage Libraries tab ─────────────────────────────────────────────────────
 
 function ManageLibraries() {
@@ -266,15 +462,13 @@ export default function Settings() {
           onClick={() => setTab('brands')}>Brand Configuration</button>
         <button className={`product-tab ${tab === 'libraries' ? 'product-tab--active' : ''}`}
           onClick={() => setTab('libraries')}>Manage Libraries</button>
+        <button className={`product-tab ${tab === 'templates' ? 'product-tab--active' : ''}`}
+          onClick={() => setTab('templates')}>Task Templates</button>
       </div>
 
-      {tab === 'brands' && (
-        <div className="settings-brand-list">
-          {brands.map(brand => brand.id ? <BrandCard key={brand.id} brand={brand} /> : null)}
-        </div>
-      )}
-
+      {tab === 'brands'    && <div className="settings-brand-list">{brands.map(brand => brand.id ? <BrandCard key={brand.id} brand={brand} /> : null)}</div>}
       {tab === 'libraries' && <ManageLibraries />}
+      {tab === 'templates' && <TaskTemplates />}
     </div>
   )
 }

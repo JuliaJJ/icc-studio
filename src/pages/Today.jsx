@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import { EVENT_TYPES } from '../lib/constants'
+import { EVENT_TYPES, NICHE_COLORS } from '../lib/constants'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
@@ -27,6 +27,15 @@ function formatLaunchDate(dateStr) {
 function getLaunchBadge(event) {
   const cfg = EVENT_TYPES[event.event_type] ?? EVENT_TYPES.other
   return { label: cfg.label, style: { background: cfg.bg, color: cfg.color, borderColor: 'transparent' } }
+}
+
+function ProductPill({ name, niche }) {
+  const c = NICHE_COLORS[niche] ?? { bg: '#F1EFE8', color: '#444441' }
+  return (
+    <span className="product-pill" style={{ background: c.bg, color: c.color }}>
+      {name}
+    </span>
+  )
 }
 
 function TaskCheckbox({ checked, onChange }) {
@@ -81,16 +90,16 @@ export default function Today() {
       { data: upcomingLaunches },
     ] = await Promise.all([
       supabase.from('products').select('id, status, platform').eq('brand_id', activeBrand.id),
-      supabase.from('tasks').select('*').eq('brand_id', activeBrand.id).eq('status', 'open'),
+      supabase.from('tasks').select('*, products(id, name, niche, is_archived)').eq('brand_id', activeBrand.id).eq('status', 'open'),
       supabase.from('revenue_entries').select('month, year, amount').eq('brand_id', activeBrand.id),
       supabase.from('launch_events').select('*').eq('brand_id', activeBrand.id)
         .gte('start_date', TODAY).order('start_date').limit(5),
     ])
 
-    const live = (products ?? []).filter(p => p.status === 'live')
+    const live = (products ?? []).filter(p => p.status === 'live' && !p.is_archived)
     const livePlatforms = [...new Set(live.flatMap(p => p.platform ?? []))]
     const draftCount = (products ?? []).filter(p => ['in_progress', 'idea'].includes(p.status)).length
-    const openList = allTasks ?? []
+    const openList = (allTasks ?? []).filter(t => !t.products?.is_archived)
     const todayCount = openList.filter(t => t.due_date === TODAY).length
 
     const { lastMonth, lastYear, prevMonth, prevYear } = getLastTwoMonths()
@@ -174,6 +183,8 @@ export default function Today() {
                       {task.title}
                     </span>
                     <div className="task-meta" style={{ marginTop: 2 }}>
+                      {task.products && <ProductPill name={task.products.name} niche={task.products.niche} />}
+                      {task.template_item_id && <span className="task-template-icon" title="Generated from template">⊞</span>}
                       {(task.labels ?? []).map(l => (
                         <span key={l} className="task-label-tag">{l}</span>
                       ))}
