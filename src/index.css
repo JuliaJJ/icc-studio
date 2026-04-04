@@ -1488,6 +1488,7 @@ a {
   border: 0.5px solid var(--color-border-tertiary);
   border-radius: var(--border-radius-md);
   min-height: 36px;
+  width: 100%;
   background: var(--color-background-primary);
   transition: border-color 100ms ease;
   cursor: text;
@@ -1522,6 +1523,7 @@ a {
 }
 
 .tag-input {
+  flex: 1;
   border: none;
   outline: none;
   font-size: 12px;

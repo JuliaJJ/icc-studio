@@ -646,6 +646,7 @@ export default function ProductDetail() {
         setForm({
           name:               data?.name               ?? '',
           status:             data?.status             ?? 'idea',
+          is_bundle:          data?.is_bundle          ?? false,
           niche:              data?.niche              ?? '',
           tier:               data?.tier               ?? '',
           theme:              data?.theme              ?? '',
@@ -933,6 +934,17 @@ export default function ProductDetail() {
                   <input className="form-input" type="date" value={form.last_updated_at} onChange={setField('last_updated_at')} />
                 </div>
               </div>
+              <div className="form-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <input
+                  type="checkbox"
+                  id="detail_is_bundle"
+                  checked={form.is_bundle}
+                  onChange={e => { setSaved(false); setForm(p => ({ ...p, is_bundle: e.target.checked })) }}
+                />
+                <label htmlFor="detail_is_bundle" style={{ fontSize: 13, color: 'var(--color-text-secondary)', userSelect: 'none', cursor: 'pointer' }}>
+                  This is a bundle product
+                </label>
+              </div>
             </div>
 
             <div className="product-detail-section">
@@ -1019,7 +1031,7 @@ export default function ProductDetail() {
               />
             </div>
 
-            <BundleSection productId={id} brandId={activeBrand.id} isBundle={product.is_bundle ?? false} />
+            <BundleSection productId={id} brandId={activeBrand.id} isBundle={form.is_bundle} />
           </div>
         )}
 
