@@ -296,8 +296,8 @@ export default function Tasks() {
                   {task.title}
                 </div>
                 <div className="task-meta">
-                  <span className="brand-tag">{activeBrand.short_code}</span>
                   {task.label && <span className="task-label-tag">{task.label}</span>}
+                  <span className="brand-tag">{activeBrand.short_code}</span>
                   <PriorityDot priority={task.priority} />
                   {task.due_date && (
                     <span className="task-due">{formatDueDate(task.due_date)}</span>
