@@ -140,12 +140,13 @@ function EventPanel({ event, defaultDate, brandId, onSave, onDelete, onClose }) 
     e.preventDefault()
     setSaving(true)
     const payload = {
-      name:       form.name,
-      start_date: form.start_date,
-      end_date:   form.end_date || null,
-      event_type: form.event_type,
-      notes:      form.notes || null,
-      brand_id:   brandId,
+      name:        form.name,
+      start_date:  form.start_date,
+      launch_date: form.start_date, // legacy NOT NULL column
+      end_date:    form.end_date || null,
+      event_type:  form.event_type,
+      notes:       form.notes || null,
+      brand_id:    brandId,
     }
     if (event) {
       const { data } = await supabase.from('launch_events').update(payload).eq('id', event.id).select().single()

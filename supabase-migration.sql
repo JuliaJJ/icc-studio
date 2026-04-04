@@ -423,3 +423,6 @@ alter table launch_events alter column start_date set not null;
 
 -- Drop the old check constraint on status so existing rows aren't blocked
 alter table launch_events drop constraint if exists launch_events_status_check;
+
+-- Make the legacy launch_date column nullable so new inserts don't require it
+alter table launch_events alter column launch_date drop not null;
