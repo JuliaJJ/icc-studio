@@ -207,7 +207,7 @@ export default function Today() {
         <div className="today-side">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Upcoming launches</span>
+              <span className="card-title">Upcoming events</span>
             </div>
             <div className="card-body">
               {launches.length === 0 ? (
