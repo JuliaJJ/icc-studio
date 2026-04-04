@@ -172,7 +172,11 @@ export default function Today() {
                     <span className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
                       {task.title}
                     </span>
-                    <span className="brand-tag">{activeBrand.short_code}</span>
+                    <div className="task-meta" style={{ marginTop: 2 }}>
+                      {(task.labels ?? []).map(l => (
+                        <span key={l} className="task-label-tag">{l}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))
