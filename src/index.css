@@ -1096,10 +1096,11 @@ a {
 
 .task-row-content {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   flex: 1;
-  flex-wrap: wrap;
+  min-width: 0;
 }
 
 /* Task list (Tasks module) */
@@ -1128,6 +1129,16 @@ a {
   flex: 1;
   cursor: pointer;
   min-width: 0;
+}
+
+.task-note-preview {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 1px;
 }
 
 /* ─── Task checkbox (spec 5.1) ──────────────────────────────────────── */

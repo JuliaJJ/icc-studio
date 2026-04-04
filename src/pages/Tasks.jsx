@@ -15,6 +15,11 @@ const PRIORITY_FILTERS = [
   { value: 'high',  label: 'High priority' },
 ]
 
+function firstNoteLine(notes) {
+  if (!notes) return null
+  return notes.split('\n')[0].trim() || null
+}
+
 function formatDueDate(date) {
   if (!date) return null
   if (date === TODAY) return 'Today'
@@ -219,6 +224,9 @@ export default function Tasks() {
                 <div className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
                   {task.title}
                 </div>
+                {firstNoteLine(task.notes) && (
+                  <div className="task-note-preview">{firstNoteLine(task.notes)}</div>
+                )}
                 <div className="task-meta">
                   {task.products && (
                     <ProductPill name={task.products.name} niche={task.products.niche} />

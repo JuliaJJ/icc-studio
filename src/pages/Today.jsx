@@ -24,6 +24,11 @@ function formatLaunchDate(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function firstNoteLine(notes) {
+  if (!notes) return null
+  return notes.split('\n')[0].trim() || null
+}
+
 function getLaunchBadge(event) {
   const cfg = EVENT_TYPES[event.event_type] ?? EVENT_TYPES.other
   return { label: cfg.label, style: { background: cfg.bg, color: cfg.color, borderColor: 'transparent' } }
@@ -182,7 +187,10 @@ export default function Today() {
                     <span className={`task-title ${task.status === 'done' ? 'task-title--done' : ''}`}>
                       {task.title}
                     </span>
-                    <div className="task-meta" style={{ marginTop: 2 }}>
+                    {firstNoteLine(task.notes) && (
+                      <div className="task-note-preview">{firstNoteLine(task.notes)}</div>
+                    )}
+                    <div className="task-meta">
                       {task.products && <ProductPill name={task.products.name} niche={task.products.niche} />}
                       {task.template_item_id && <span className="task-template-icon" title="Generated from template">⊞</span>}
                       {(task.labels ?? []).map(l => (
