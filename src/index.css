@@ -1211,6 +1211,12 @@ a {
   color: var(--color-text-tertiary);
 }
 
+.task-overdue {
+  font-size: 11px;
+  color: #9F1239;
+  font-weight: 500;
+}
+
 /* ─── Priority dot ──────────────────────────────────────────────────── */
 .priority-dot {
   width: 6px;

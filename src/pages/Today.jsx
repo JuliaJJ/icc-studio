@@ -115,10 +115,11 @@ export default function Today() {
     const prevRev = sumRev(revenue, prevMonth, prevYear)
     const revenueChange = prevRev > 0 ? Math.round(((lastRev - prevRev) / prevRev) * 100) : null
 
-    // Today tasks: due today + up to 3 open with no due date, deduplicated, sorted by priority
+    // Today tasks: overdue + due today + up to 3 open with no due date, sorted by priority
+    const overdueTasks  = openList.filter(t => t.due_date && t.due_date < TODAY)
     const dueTodayTasks = openList.filter(t => t.due_date === TODAY)
-    const noDateTasks = openList.filter(t => !t.due_date).slice(0, 3)
-    const todayDisplay = [...dueTodayTasks, ...noDateTasks]
+    const noDateTasks   = openList.filter(t => !t.due_date).slice(0, 3)
+    const todayDisplay = [...overdueTasks, ...dueTodayTasks, ...noDateTasks]
       .filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i)
       .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
 
@@ -197,6 +198,9 @@ export default function Today() {
                       {(task.labels ?? []).map(l => (
                         <span key={l} className="task-label-tag">{l}</span>
                       ))}
+                      {task.due_date && task.due_date < TODAY && (
+                        <span className="task-overdue">Overdue · {formatLaunchDate(task.due_date)}</span>
+                      )}
                     </div>
                   </div>
                 </div>
