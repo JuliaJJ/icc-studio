@@ -1534,7 +1534,7 @@ a {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 320px;
+  width: 600px;
   background: var(--color-background-primary);
   border-left: 0.5px solid var(--color-border-tertiary);
   display: flex;
