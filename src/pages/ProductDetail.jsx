@@ -964,6 +964,8 @@ export default function ProductDetail() {
       </div>
 
       <form onSubmit={handleSave}>
+        <div className="product-detail-layout">
+        <div className="product-detail-main">
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="product-detail-header">
           <input
@@ -996,28 +998,6 @@ export default function ProductDetail() {
             })()}
           </div>
         </div>
-
-        {/* ── Image ───────────────────────────────────────────────────────── */}
-        <div className="product-image-area"
-          style={{ cursor: imageUrl ? 'zoom-in' : 'pointer', padding: 0 }}
-          onClick={() => { if (imageUrl) setImageLightbox(true); else imageInputRef.current?.click() }}
-        >
-          {imageUrl ? (
-            <>
-              <img src={imageUrl} alt={form.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div className="product-image-actions">
-                <button type="button" className="product-image-action-btn" onClick={e => { e.stopPropagation(); imageInputRef.current?.click() }}>Change</button>
-                <button type="button" className="product-image-action-btn" onClick={e => { e.stopPropagation(); handleImageRemove() }}>Remove</button>
-              </div>
-            </>
-          ) : (
-            <>
-              <span style={{ fontSize: 28 }}>{productEmoji(form.product_type)}</span>
-              <span className="product-image-note">{uploadingImage ? 'Uploading…' : 'Click to upload image'}</span>
-            </>
-          )}
-        </div>
-        <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
 
         {/* ── Tab bar ─────────────────────────────────────────────────────── */}
         <div className="product-tabs">
@@ -1356,6 +1336,33 @@ export default function ProductDetail() {
             </button>
           </div>
         </div>
+        </div>{/* end product-detail-main */}
+
+        {/* ── Image (right column) ─────────────────────────────────────────── */}
+        <div className="product-detail-sidebar">
+          <div className="product-image-area"
+            style={{ cursor: imageUrl ? 'zoom-in' : 'pointer', padding: 0 }}
+            onClick={() => { if (imageUrl) setImageLightbox(true); else imageInputRef.current?.click() }}
+          >
+            {imageUrl ? (
+              <>
+                <img src={imageUrl} alt={form.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div className="product-image-actions">
+                  <button type="button" className="product-image-action-btn" onClick={e => { e.stopPropagation(); imageInputRef.current?.click() }}>Change</button>
+                  <button type="button" className="product-image-action-btn" onClick={e => { e.stopPropagation(); handleImageRemove() }}>Remove</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: 28 }}>{productEmoji(form.product_type)}</span>
+                <span className="product-image-note">{uploadingImage ? 'Uploading…' : 'Click to upload image'}</span>
+              </>
+            )}
+          </div>
+          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+        </div>
+
+        </div>{/* end product-detail-layout */}
       </form>
 
       {libraryPickerOpen && (
