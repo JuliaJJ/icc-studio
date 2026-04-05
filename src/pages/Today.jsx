@@ -98,7 +98,7 @@ export default function Today() {
       supabase.from('tasks').select('*, products(id, name, niche, is_archived)').eq('brand_id', activeBrand.id).eq('status', 'open'),
       supabase.from('revenue_entries').select('month, year, amount').eq('brand_id', activeBrand.id),
       supabase.from('launch_events').select('*').eq('brand_id', activeBrand.id)
-        .gte('start_date', TODAY).order('start_date').limit(5),
+        .gte('start_date', TODAY).order('start_date').limit(10),
     ])
 
     const live = (products ?? []).filter(p => p.status === 'live' && !p.is_archived)
