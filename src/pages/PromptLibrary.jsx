@@ -137,7 +137,7 @@ function PromptPanel({ prompt, brandId, onSave, onDelete, onClose }) {
           </div>
           <div className="form-field">
             <label className="form-label">Prompt content</label>
-            <textarea className="form-textarea" rows={7} value={form.content} onChange={set('content')} required placeholder="Paste your full prompt here…" style={{ fontFamily: 'monospace', fontSize: 12 }} />
+            <textarea className="form-textarea" rows={20} value={form.content} onChange={set('content')} required placeholder="Paste your full prompt here…" style={{ fontFamily: 'monospace', fontSize: 12 }} />
           </div>
           <div className="form-field">
             <label className="form-label">Example output URL</label>
