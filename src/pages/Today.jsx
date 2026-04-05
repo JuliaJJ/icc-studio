@@ -138,9 +138,14 @@ export default function Today() {
     const overdueTasks  = openList.filter(t => t.due_date && t.due_date < TODAY)
     const dueTodayTasks = openList.filter(t => t.due_date === TODAY)
     const noDateTasks   = openList.filter(t => !t.due_date).slice(0, 3)
+    function dateGroup(t) {
+      if (t.due_date && t.due_date < TODAY) return 0  // overdue
+      if (t.due_date === TODAY)             return 1  // due today
+      return 2                                        // no date
+    }
     const todayDisplay = [...overdueTasks, ...dueTodayTasks, ...noDateTasks]
       .filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i)
-      .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
+      .sort((a, b) => dateGroup(a) - dateGroup(b) || (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
       .slice(0, 10)
 
     // Generate signed URLs for assets and product hero images
