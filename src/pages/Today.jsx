@@ -142,11 +142,21 @@ export default function Today() {
       .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
       .slice(0, 10)
 
+    // Generate signed URLs for assets that have a storage path
+    const rawAssets = latestAssets ?? []
+    const assetsWithUrls = await Promise.all(
+      rawAssets.map(async a => {
+        if (!a.file_url) return a
+        const { data } = await supabase.storage.from('icc-assets').createSignedUrl(a.file_url, 3600)
+        return { ...a, signedUrl: data?.signedUrl ?? null }
+      })
+    )
+
     setMetrics({ liveCount: live.length, livePlatforms, draftCount, openTasks: openList.length, todayTasks: todayCount, revenue: lastRev, revenueChange })
     setTasks(todayDisplay)
     setLaunches(upcomingLaunches ?? [])
     setProducts(latestProducts ?? [])
-    setAssets(latestAssets ?? [])
+    setAssets(assetsWithUrls)
     setLoading(false)
   }
 
@@ -327,8 +337,8 @@ export default function Today() {
               <div className="today-item-grid">
                 {assets.map(a => (
                   <div key={a.id} className="today-asset-cell" onClick={() => navigate('/assets')}>
-                    {a.file_url ? (
-                      <img src={a.file_url} alt={a.filename} className="today-asset-thumb" />
+                    {a.signedUrl ? (
+                      <img src={a.signedUrl} alt={a.filename} className="today-asset-thumb" />
                     ) : (
                       <span className="today-asset-emoji">{ROLE_EMOJI[a.role] ?? '📄'}</span>
                     )}
