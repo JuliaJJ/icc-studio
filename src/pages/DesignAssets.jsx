@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import FilterPills from '../components/FilterPills'
 import { PRODUCT_STATUS, productEmoji } from '../lib/constants'
+import ImageLightbox from '../components/ImageLightbox'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -336,6 +337,7 @@ function AssetDetail({ asset, onEdit, onLinkedProductClick }) {
   const [linkProductOpen, setLinkProductOpen] = useState(false)
   const [savingNotes, setSavingNotes] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   useEffect(() => {
     if (!asset.file_url) { setPreviewUrl(null); return }
@@ -387,13 +389,16 @@ function AssetDetail({ asset, onEdit, onLinkedProductClick }) {
   return (
     <div className="asset-detail-panel">
       {/* Preview area */}
-      <div className="asset-detail-preview">
+      <div className="asset-detail-preview" onClick={() => previewUrl && setLightboxOpen(true)}>
         {previewUrl ? (
           <img src={previewUrl} alt={asset.filename} className="asset-detail-preview-img" />
         ) : (
           <span className="asset-detail-preview-icon">{assetEmoji(asset.role)}</span>
         )}
       </div>
+      {lightboxOpen && previewUrl && (
+        <ImageLightbox src={previewUrl} alt={asset.filename} onClose={() => setLightboxOpen(false)} />
+      )}
 
       {/* Header */}
       <div className="asset-detail-header">

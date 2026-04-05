@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import { PRODUCT_STATUS, productEmoji, NICHES, PRODUCT_TIERS, FULFILLMENT_OPTIONS } from '../lib/constants'
 import { normalizeLabel } from '../lib/taskNlp'
+import ImageLightbox from '../components/ImageLightbox'
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
@@ -778,6 +779,7 @@ export default function ProductDetail() {
   const [saved, setSaved] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [imageUrl, setImageUrl] = useState(null)
+  const [imageLightbox, setImageLightbox] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [linkedAssets, setLinkedAssets] = useState([])
   const [productAssets, setProductAssets] = useState([])
@@ -997,15 +999,15 @@ export default function ProductDetail() {
 
         {/* ── Image ───────────────────────────────────────────────────────── */}
         <div className="product-image-area"
-          style={{ cursor: imageUrl ? 'default' : 'pointer', padding: 0, overflow: 'hidden' }}
-          onClick={() => { if (!imageUrl) imageInputRef.current?.click() }}
+          style={{ cursor: imageUrl ? 'zoom-in' : 'pointer', padding: 0 }}
+          onClick={() => { if (imageUrl) setImageLightbox(true); else imageInputRef.current?.click() }}
         >
           {imageUrl ? (
             <>
               <img src={imageUrl} alt={form.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div className="product-image-actions">
-                <button type="button" className="product-image-action-btn" onClick={() => imageInputRef.current?.click()}>Change</button>
-                <button type="button" className="product-image-action-btn" onClick={handleImageRemove}>Remove</button>
+                <button type="button" className="product-image-action-btn" onClick={e => { e.stopPropagation(); imageInputRef.current?.click() }}>Change</button>
+                <button type="button" className="product-image-action-btn" onClick={e => { e.stopPropagation(); handleImageRemove() }}>Remove</button>
               </div>
             </>
           ) : (
@@ -1364,6 +1366,9 @@ export default function ProductDetail() {
           onAdd={kw => { if (!form.keywords.includes(kw)) setDirect('keywords', [...form.keywords, kw]) }}
           onClose={() => setLibraryPickerOpen(false)}
         />
+      )}
+      {imageLightbox && imageUrl && (
+        <ImageLightbox src={imageUrl} alt={form.name} onClose={() => setImageLightbox(false)} />
       )}
     </div>
   )

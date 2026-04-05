@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import { EVENT_TYPES, NICHE_COLORS, PRODUCT_STATUS, productEmoji } from '../lib/constants'
+import ImageLightbox from '../components/ImageLightbox'
 
 const _now = new Date()
 const TODAY = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
@@ -88,10 +89,11 @@ export default function Today() {
     liveCount: 0, livePlatforms: [], draftCount: 0,
     openTasks: 0, todayTasks: 0, revenue: 0, revenueChange: null,
   })
-  const [tasks, setTasks]       = useState([])
-  const [launches, setLaunches] = useState([])
-  const [products, setProducts] = useState([])
-  const [assets, setAssets]     = useState([])
+  const [tasks, setTasks]           = useState([])
+  const [launches, setLaunches]     = useState([])
+  const [products, setProducts]     = useState([])
+  const [assets, setAssets]         = useState([])
+  const [lightbox, setLightbox]     = useState(null) // { src, alt }
 
   useEffect(() => {
     if (!activeBrand.id) return
@@ -113,7 +115,7 @@ export default function Today() {
       supabase.from('revenue_entries').select('month, year, amount').eq('brand_id', activeBrand.id),
       supabase.from('launch_events').select('*').eq('brand_id', activeBrand.id)
         .gte('start_date', TODAY).order('start_date').limit(10),
-      supabase.from('products').select('id, name, status, niche, product_type')
+      supabase.from('products').select('id, name, status, niche, product_type, image_urls')
         .eq('brand_id', activeBrand.id).eq('is_archived', false)
         .order('updated_at', { ascending: false }).limit(9),
       supabase.from('assets').select('id, filename, role, file_url, niche')
@@ -142,7 +144,7 @@ export default function Today() {
       .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
       .slice(0, 10)
 
-    // Generate signed URLs for assets that have a storage path
+    // Generate signed URLs for assets and product hero images
     const rawAssets = latestAssets ?? []
     const assetsWithUrls = await Promise.all(
       rawAssets.map(async a => {
@@ -152,10 +154,20 @@ export default function Today() {
       })
     )
 
+    const rawProducts = latestProducts ?? []
+    const productsWithUrls = await Promise.all(
+      rawProducts.map(async p => {
+        const path = p.image_urls?.[0]
+        if (!path) return p
+        const { data } = await supabase.storage.from('icc-assets').createSignedUrl(path, 3600)
+        return { ...p, signedUrl: data?.signedUrl ?? null }
+      })
+    )
+
     setMetrics({ liveCount: live.length, livePlatforms, draftCount, openTasks: openList.length, todayTasks: todayCount, revenue: lastRev, revenueChange })
     setTasks(todayDisplay)
     setLaunches(upcomingLaunches ?? [])
-    setProducts(latestProducts ?? [])
+    setProducts(productsWithUrls)
     setAssets(assetsWithUrls)
     setLoading(false)
   }
@@ -310,12 +322,24 @@ export default function Today() {
               <div className="today-item-grid">
                 {products.map(p => {
                   const st = PRODUCT_STATUS[p.status] ?? PRODUCT_STATUS.idea
-                  const nc = NICHE_COLORS[p.niche] ?? { bg: '#F1EFE8', color: '#444441' }
                   return (
                     <div key={p.id} className="today-product-cell" onClick={() => navigate(`/catalog/${p.id}`)}>
-                      <span className="today-product-emoji">{productEmoji(p.product_type)}</span>
-                      <span className="today-product-name">{p.name}</span>
-                      <span className="today-product-status" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                      <div className="today-cell-thumb">
+                        {p.signedUrl ? (
+                          <img
+                            src={p.signedUrl}
+                            alt={p.name}
+                            data-has-lightbox="1"
+                            onClick={e => { e.stopPropagation(); setLightbox({ src: p.signedUrl, alt: p.name }) }}
+                          />
+                        ) : (
+                          <span className="today-cell-emoji">{productEmoji(p.product_type)}</span>
+                        )}
+                      </div>
+                      <div className="today-cell-info">
+                        <span className="today-product-name">{p.name}</span>
+                        <span className="today-product-status" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                      </div>
                     </div>
                   )
                 })}
@@ -337,12 +361,21 @@ export default function Today() {
               <div className="today-item-grid">
                 {assets.map(a => (
                   <div key={a.id} className="today-asset-cell" onClick={() => navigate('/assets')}>
-                    {a.signedUrl ? (
-                      <img src={a.signedUrl} alt={a.filename} className="today-asset-thumb" />
-                    ) : (
-                      <span className="today-asset-emoji">{ROLE_EMOJI[a.role] ?? '📄'}</span>
-                    )}
-                    <span className="today-asset-name">{a.filename}</span>
+                    <div className="today-cell-thumb">
+                      {a.signedUrl ? (
+                        <img
+                          src={a.signedUrl}
+                          alt={a.filename}
+                          data-has-lightbox="1"
+                          onClick={e => { e.stopPropagation(); setLightbox({ src: a.signedUrl, alt: a.filename }) }}
+                        />
+                      ) : (
+                        <span className="today-cell-emoji">{ROLE_EMOJI[a.role] ?? '📄'}</span>
+                      )}
+                    </div>
+                    <div className="today-cell-info">
+                      <span className="today-asset-name">{a.filename}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -352,6 +385,7 @@ export default function Today() {
 
       </div>
 
+      {lightbox && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
     </div>
   )
 }
