@@ -274,6 +274,9 @@ export default function Today() {
                       <span className="launch-date">{formatLaunchDate(event.start_date)}</span>
                     </div>
                     <span className="badge" style={badge.style}>{badge.label}</span>
+                    {firstNoteLine(event.notes) && (
+                      <div className="task-note-preview">{firstNoteLine(event.notes)}</div>
+                    )}
                   </div>
                 )
               })
