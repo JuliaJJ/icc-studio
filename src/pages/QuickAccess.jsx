@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useBrand } from '../context/BrandContext'
 import { groupColor } from '../lib/constants'
 
-const DEFAULT_GROUPS = ['Storefronts', 'Design tools', 'Marketing', 'Research tools']
+const DEFAULT_GROUPS = ['Storefronts', 'Design tools', 'Marketing', 'Research tools', 'Fulfillment']
 
 function LinkPanel({ link, existingGroups, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
