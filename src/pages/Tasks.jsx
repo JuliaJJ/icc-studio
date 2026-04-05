@@ -21,6 +21,7 @@ const PRIORITY_FILTERS = [
   { value: 'all',   label: 'All' },
   { value: 'today', label: 'Today' },
   { value: 'high',  label: 'High priority' },
+  { value: 'done',  label: 'Completed' },
 ]
 
 function firstNoteLine(notes) {
@@ -67,14 +68,14 @@ function ProductPill({ name, niche }) {
 
 // ─── Sortable task row ────────────────────────────────────────────────────────
 
-function SortableTaskRow({ task, canDrag, onToggle, onNavigate }) {
+function SortableTaskRow({ task, canDrag, fading, onToggle, onNavigate }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id, disabled: !canDrag })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.4 : fading ? 0 : 1,
   }
 
   return (
@@ -189,9 +190,10 @@ function QuickAddBar({ brandId, onAdded }) {
 export default function Tasks() {
   const { activeBrand } = useBrand()
   const navigate = useNavigate()
-  const [tasks, setTasks]     = useState([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter]   = useState('all')
+  const [tasks, setTasks]         = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState('all')
+  const [fadingIds, setFadingIds] = useState(new Set())
 
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: { distance: 6 },
@@ -213,6 +215,14 @@ export default function Tasks() {
     const newStatus = task.status === 'done' ? 'open' : 'done'
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id)
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
+    if (newStatus === 'done') {
+      setFadingIds(prev => new Set([...prev, task.id]))
+      setTimeout(() => {
+        setFadingIds(prev => { const n = new Set(prev); n.delete(task.id); return n })
+      }, 600)
+    } else {
+      setFadingIds(prev => { const n = new Set(prev); n.delete(task.id); return n })
+    }
   }
 
   function handleAdded(task) {
@@ -244,19 +254,21 @@ export default function Tasks() {
 
   const isUnfiltered = filter === 'all' && !activeLabel
 
-  const filtered = isUnfiltered
-    ? tasks
-    : tasks
-        .filter(task => {
-          if (filter === 'today') return task.due_date === TODAY && task.status === 'open'
-          if (filter === 'high')  return task.priority === 'high' && task.status === 'open'
-          if (activeLabel)        return (task.labels ?? []).includes(activeLabel)
-          return true
-        })
-        .sort((a, b) => {
-          if (a.status !== b.status) return a.status === 'open' ? -1 : 1
-          return (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
-        })
+  const filtered = filter === 'done'
+    ? tasks.filter(t => t.status === 'done').sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
+    : isUnfiltered
+      ? tasks.filter(t => t.status === 'open' || fadingIds.has(t.id))
+      : tasks
+          .filter(task => {
+            if (filter === 'today') return task.due_date === TODAY && task.status === 'open'
+            if (filter === 'high')  return task.priority === 'high' && task.status === 'open'
+            if (activeLabel)        return (task.labels ?? []).includes(activeLabel) && task.status === 'open'
+            return true
+          })
+          .sort((a, b) => {
+            if (a.status !== b.status) return a.status === 'open' ? -1 : 1
+            return (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
+          })
 
   return (
     <div className="tasks-page">
@@ -288,7 +300,7 @@ export default function Tasks() {
         <div className="empty-state">
           <span className="empty-icon">✓</span>
           <span className="empty-text">
-            {filter === 'all' ? 'No tasks yet' : 'No tasks match this filter'}
+            {filter === 'all' ? 'No tasks yet' : filter === 'done' ? 'No completed tasks' : 'No tasks match this filter'}
           </span>
         </div>
       ) : (
@@ -299,6 +311,7 @@ export default function Tasks() {
                 <SortableTaskRow
                   key={task.id}
                   task={task}
+                  fading={fadingIds.has(task.id)}
                   canDrag={isUnfiltered}
                   onToggle={toggleTask}
                   onNavigate={id => navigate(`/tasks/${id}`)}
