@@ -802,6 +802,7 @@ export default function ProductDetail() {
           palette:            data?.palette            ?? '',
           formats:            data?.formats            ?? [],
           sizes:              data?.sizes              ?? [],
+          occasions:          data?.occasions          ?? [],
           fulfillment:        data?.fulfillment        ?? '',
           price:              data?.price              ?? '',
           sku:                data?.sku                ?? '',
@@ -1098,6 +1099,15 @@ export default function ProductDetail() {
                 values={form.sizes} onChange={v => setDirect('sizes', v)}
                 brandId={activeBrand.id} type="size"
                 placeholder="Type size + Enter (e.g. 8×10, 11×14)"
+              />
+            </div>
+
+            <div className="product-detail-section">
+              <LabelRow label="Occasions" />
+              <LibraryTagInput
+                values={form.occasions} onChange={v => setDirect('occasions', v)}
+                brandId={activeBrand.id} type="occasion"
+                placeholder="Type occasion + Enter (e.g. Birthday, Christmas)"
               />
             </div>
 

@@ -473,3 +473,7 @@ alter table products add column if not exists is_archived      boolean default f
 alter table launch_events
   add column if not exists recurrence_type     text check (recurrence_type in ('daily', 'weekly', 'monthly', 'yearly')),
   add column if not exists recurrence_end_date date;
+
+
+-- ─── Product occasions ────────────────────────────────────────────────────────
+alter table products add column if not exists occasions text[] default '{}';
