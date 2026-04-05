@@ -13,7 +13,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-const TODAY = new Date().toISOString().split('T')[0]
+const _now = new Date()
+const TODAY = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
 
 const PRIORITY_FILTERS = [
