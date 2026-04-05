@@ -1316,16 +1316,16 @@ a {
 
 /* ─── Priority dot ──────────────────────────────────────────────────── */
 .priority-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
   display: inline-block;
 }
 
-.priority-dot--high   { background: #e74c3c; }
-.priority-dot--medium { background: #e67e22; }
-.priority-dot--low    { background: #27ae60; }
+.priority-dot--high   { background: #EF4444; }
+.priority-dot--medium { background: #F59E0B; }
+.priority-dot--low    { background: #94A3B8; }
 
 /* ─── Brand tag pill ────────────────────────────────────────────────── */
 .brand-tag {
