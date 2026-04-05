@@ -137,10 +137,23 @@ export default function Catalog() {
     setLoading(true)
     supabase
       .from('products')
-      .select('id, name, niche, status, image_urls, is_bundle, is_archived')
+      .select('id, name, niche, status, product_type, image_urls, is_bundle, is_archived')
       .eq('brand_id', activeBrand.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => { setProducts(data ?? []); setLoading(false) })
+      .then(async ({ data }) => {
+        const rows = data ?? []
+        // Batch sign all hero image paths in a single request
+        const paths = rows.map(p => p.image_urls?.[0]).filter(Boolean)
+        let signedMap = {}
+        if (paths.length) {
+          const { data: signed } = await supabase.storage
+            .from('icc-assets')
+            .createSignedUrls(paths, 3600)
+          ;(signed ?? []).forEach(s => { if (s.signedUrl) signedMap[s.path] = s.signedUrl })
+        }
+        setProducts(rows.map(p => ({ ...p, signedUrl: signedMap[p.image_urls?.[0]] ?? null })))
+        setLoading(false)
+      })
   }, [activeBrand.id])
 
   const visible = products.filter(p => showArchived ? p.is_archived : !p.is_archived)
@@ -183,8 +196,8 @@ export default function Catalog() {
           {filtered.map(product => (
             <Link key={product.id} to={`/catalog/${product.id}`} className="product-card">
               <div className="product-card-image">
-                {product.image_urls?.[0]
-                  ? <img src={product.image_urls[0]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {product.signedUrl
+                  ? <img src={product.signedUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span>{productEmoji(product.product_type)}</span>
                 }
               </div>

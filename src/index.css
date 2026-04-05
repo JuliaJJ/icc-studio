@@ -1928,7 +1928,7 @@ a {
 }
 
 .product-card-image {
-  height: 90px;
+  aspect-ratio: 1;
   background: var(--color-background-secondary);
   display: flex;
   align-items: center;
