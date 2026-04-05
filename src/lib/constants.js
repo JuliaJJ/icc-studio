@@ -67,6 +67,23 @@ export const NICHE_COLORS = {
 
 export const PLATFORMS = ['Etsy', 'Printify', 'KDP', 'Gumroad', 'Stan Store', 'Kittl']
 
+const GROUP_PALETTE = [
+  { accent: '#4C2F9E' },
+  { accent: '#27500A' },
+  { accent: '#0C447C' },
+  { accent: '#92400E' },
+  { accent: '#9F1239' },
+  { accent: '#0F766E' },
+  { accent: '#3730A3' },
+  { accent: '#92320C' },
+]
+
+export function groupColor(name) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return GROUP_PALETTE[h % GROUP_PALETTE.length].accent
+}
+
 export const EVENT_TYPES = {
   holiday:          { label: 'Holiday',          bg: '#EDE9FB', color: '#4C2F9E' },
   launch:           { label: 'Launch',           bg: '#EAF3DE', color: '#27500A' },

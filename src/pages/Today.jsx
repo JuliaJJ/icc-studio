@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import { EVENT_TYPES, NICHE_COLORS, PRODUCT_STATUS, productEmoji } from '../lib/constants'
+import { EVENT_TYPES, NICHE_COLORS, PRODUCT_STATUS, productEmoji, groupColor } from '../lib/constants'
 
 
 const _now = new Date()
@@ -297,7 +297,7 @@ export default function Today() {
               <div className="quick-links-grid">
                 {quickLinks.map((link, i) => (
                   <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="link-pill">
-                    <span className="link-pill-dot" />
+                    <span className="link-pill-dot" style={{ background: groupColor(link.group || 'Other') }} />
                     <span className="link-pill-label">{link.name}</span>
                   </a>
                 ))}
