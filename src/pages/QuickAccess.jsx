@@ -3,6 +3,23 @@ import { useBrand } from '../context/BrandContext'
 
 const DEFAULT_GROUPS = ['Storefronts', 'Design tools', 'Marketing', 'Research tools']
 
+const GROUP_PALETTE = [
+  { accent: '#4C2F9E', bg: '#EDE9FB' },
+  { accent: '#27500A', bg: '#EAF3DE' },
+  { accent: '#0C447C', bg: '#E6F1FB' },
+  { accent: '#92400E', bg: '#FEF3C7' },
+  { accent: '#9F1239', bg: '#FFE4E6' },
+  { accent: '#0F766E', bg: '#CCFBF1' },
+  { accent: '#3730A3', bg: '#E0E7FF' },
+  { accent: '#92320C', bg: '#FEE2D5' },
+]
+
+function groupColor(name) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return GROUP_PALETTE[h % GROUP_PALETTE.length]
+}
+
 function LinkPanel({ link, existingGroups, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
     name: link?.name ?? '',
@@ -155,9 +172,11 @@ export default function QuickAccess() {
         </div>
       ) : (
         <div className="quick-access-grid">
-          {Object.entries(grouped).map(([group, groupLinks]) => (
-            <div key={group} className="quick-access-card">
-              <div className="quick-access-card-title">{group}</div>
+          {Object.entries(grouped).map(([group, groupLinks]) => {
+            const c = groupColor(group)
+            return (
+            <div key={group} className="quick-access-card" style={{ borderTop: `3px solid ${c.accent}` }}>
+              <div className="quick-access-card-title" style={{ color: c.accent }}>{group}</div>
               <div className="link-pills-grid">
                 {groupLinks.map((link) => {
                   const globalIndex = links.findIndex(l => l === link)
@@ -170,7 +189,7 @@ export default function QuickAccess() {
                         className="link-pill"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <span className="link-pill-dot" />
+                        <span className="link-pill-dot" style={{ background: c.accent }} />
                         <span className="link-pill-label">{link.name}</span>
                       </a>
                       <button
@@ -185,7 +204,7 @@ export default function QuickAccess() {
                 })}
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
