@@ -2,21 +2,26 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import { EVENT_TYPES, NICHE_COLORS } from '../lib/constants'
+import { EVENT_TYPES, NICHE_COLORS, PRODUCT_STATUS, productEmoji } from '../lib/constants'
 
 const _now = new Date()
 const TODAY = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
+
+const ROLE_EMOJI = {
+  source_file:   '📁',
+  mockup:        '🖼️',
+  listing_image: '🏞️',
+  ad_creative:   '🎨',
+}
 
 function getLastTwoMonths() {
   const now = new Date()
   const last = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const prev = new Date(now.getFullYear(), now.getMonth() - 2, 1)
   return {
-    lastMonth: last.getMonth() + 1,
-    lastYear: last.getFullYear(),
-    prevMonth: prev.getMonth() + 1,
-    prevYear: prev.getFullYear(),
+    lastMonth: last.getMonth() + 1, lastYear: last.getFullYear(),
+    prevMonth: prev.getMonth() + 1, prevYear: prev.getFullYear(),
   }
 }
 
@@ -38,9 +43,7 @@ function getLaunchBadge(event) {
 function ProductPill({ name, niche }) {
   const c = NICHE_COLORS[niche] ?? { bg: '#F1EFE8', color: '#444441' }
   return (
-    <span className="product-pill" style={{ background: c.bg, color: c.color }}>
-      {name}
-    </span>
+    <span className="product-pill" style={{ background: c.bg, color: c.color }}>{name}</span>
   )
 }
 
@@ -71,6 +74,12 @@ function MetricCard({ label, value, sub }) {
   )
 }
 
+function CardAddBtn({ label, onClick }) {
+  return (
+    <button className="card-add-btn" onClick={onClick}>{label}</button>
+  )
+}
+
 export default function Today() {
   const { activeBrand } = useBrand()
   const navigate = useNavigate()
@@ -79,8 +88,10 @@ export default function Today() {
     liveCount: 0, livePlatforms: [], draftCount: 0,
     openTasks: 0, todayTasks: 0, revenue: 0, revenueChange: null,
   })
-  const [tasks, setTasks] = useState([])
+  const [tasks, setTasks]       = useState([])
   const [launches, setLaunches] = useState([])
+  const [products, setProducts] = useState([])
+  const [assets, setAssets]     = useState([])
 
   useEffect(() => {
     if (!activeBrand.id) return
@@ -90,21 +101,29 @@ export default function Today() {
   async function fetchAll() {
     setLoading(true)
     const [
-      { data: products },
+      { data: allProducts },
       { data: allTasks },
       { data: revenue },
       { data: upcomingLaunches },
+      { data: latestProducts },
+      { data: latestAssets },
     ] = await Promise.all([
       supabase.from('products').select('id, status, platform').eq('brand_id', activeBrand.id),
       supabase.from('tasks').select('*, products(id, name, niche, is_archived)').eq('brand_id', activeBrand.id).eq('status', 'open'),
       supabase.from('revenue_entries').select('month, year, amount').eq('brand_id', activeBrand.id),
       supabase.from('launch_events').select('*').eq('brand_id', activeBrand.id)
         .gte('start_date', TODAY).order('start_date').limit(10),
+      supabase.from('products').select('id, name, status, niche, product_type')
+        .eq('brand_id', activeBrand.id).eq('is_archived', false)
+        .order('updated_at', { ascending: false }).limit(9),
+      supabase.from('assets').select('id, filename, role, file_url, niche')
+        .eq('brand_id', activeBrand.id)
+        .order('created_at', { ascending: false }).limit(9),
     ])
 
-    const live = (products ?? []).filter(p => p.status === 'live' && !p.is_archived)
+    const live = (allProducts ?? []).filter(p => p.status === 'live' && !p.is_archived)
     const livePlatforms = [...new Set(live.flatMap(p => p.platform ?? []))]
-    const draftCount = (products ?? []).filter(p => ['in_progress', 'idea'].includes(p.status)).length
+    const draftCount = (allProducts ?? []).filter(p => ['in_progress', 'idea'].includes(p.status)).length
     const openList = (allTasks ?? []).filter(t => !t.products?.is_archived)
     const todayCount = openList.filter(t => t.due_date === TODAY).length
 
@@ -115,17 +134,19 @@ export default function Today() {
     const prevRev = sumRev(revenue, prevMonth, prevYear)
     const revenueChange = prevRev > 0 ? Math.round(((lastRev - prevRev) / prevRev) * 100) : null
 
-    // Today tasks: overdue + due today + up to 3 open with no due date, sorted by priority
     const overdueTasks  = openList.filter(t => t.due_date && t.due_date < TODAY)
     const dueTodayTasks = openList.filter(t => t.due_date === TODAY)
     const noDateTasks   = openList.filter(t => !t.due_date).slice(0, 3)
     const todayDisplay = [...overdueTasks, ...dueTodayTasks, ...noDateTasks]
       .filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i)
       .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1))
+      .slice(0, 10)
 
     setMetrics({ liveCount: live.length, livePlatforms, draftCount, openTasks: openList.length, todayTasks: todayCount, revenue: lastRev, revenueChange })
     setTasks(todayDisplay)
     setLaunches(upcomingLaunches ?? [])
+    setProducts(latestProducts ?? [])
+    setAssets(latestAssets ?? [])
     setLoading(false)
   }
 
@@ -145,7 +166,8 @@ export default function Today() {
 
   return (
     <div className="today-page">
-      {/* Row 1 — Metric cards */}
+
+      {/* Metric cards */}
       <div className="today-metrics">
         <MetricCard
           label="Active listings"
@@ -171,11 +193,14 @@ export default function Today() {
         />
       </div>
 
-      {/* Row 2 — Tasks left, launches + quick access right */}
-      <div className="today-row2">
+      {/* Three-column row */}
+      <div className="today-grid-3">
+
+        {/* Today's tasks */}
         <div className="card">
           <div className="card-header">
             <span className="card-title">Today's tasks</span>
+            <CardAddBtn label="Add task" onClick={() => navigate('/tasks')} />
           </div>
           <div className="card-body">
             {tasks.length === 0 ? (
@@ -209,51 +234,112 @@ export default function Today() {
           </div>
         </div>
 
-        <div className="today-side">
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">Upcoming events</span>
-            </div>
-            <div className="card-body">
-              {launches.length === 0 ? (
-                <div className="card-empty">No upcoming launches</div>
-              ) : (
-                launches.map(event => {
-                  const badge = getLaunchBadge(event)
-                  return (
-                    <div key={event.id} className="launch-row">
-                      <div className="launch-row-main">
-                        <span className="launch-name">{event.name}</span>
-                        <span className="launch-date">{formatLaunchDate(event.start_date)}</span>
-                      </div>
-                      <span className="badge" style={badge.style}>{badge.label}</span>
-                    </div>
-                  )
-                })
-              )}
-            </div>
+        {/* Upcoming events */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Upcoming events</span>
+            <CardAddBtn label="Add event" onClick={() => navigate('/calendar')} />
           </div>
-
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">Quick access</span>
-            </div>
-            <div className="card-body">
-              {quickLinks.length === 0 ? (
-                <div className="card-empty">No links yet — add them in Quick Access</div>
-              ) : (
-                <div className="quick-links-grid">
-                  {quickLinks.map((link, i) => (
-                    <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="link-pill">
-                      <span className="link-pill-dot" />
-                      <span className="link-pill-label">{link.name}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="card-body">
+            {launches.length === 0 ? (
+              <div className="card-empty">No upcoming events</div>
+            ) : (
+              launches.map(event => {
+                const badge = getLaunchBadge(event)
+                return (
+                  <div key={event.id} className="launch-row">
+                    <div className="launch-row-main">
+                      <span className="launch-name">{event.name}</span>
+                      <span className="launch-date">{formatLaunchDate(event.start_date)}</span>
+                    </div>
+                    <span className="badge" style={badge.style}>{badge.label}</span>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
+
+        {/* Quick access */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Quick access</span>
+            <CardAddBtn label="Add link" onClick={() => navigate('/quick-access')} />
+          </div>
+          <div className="card-body">
+            {quickLinks.length === 0 ? (
+              <div className="card-empty">No links yet — add them in Quick Access</div>
+            ) : (
+              <div className="quick-links-grid">
+                {quickLinks.map((link, i) => (
+                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="link-pill">
+                    <span className="link-pill-dot" />
+                    <span className="link-pill-label">{link.name}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Two-column row */}
+      <div className="today-grid-2">
+
+        {/* Latest products */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Latest products</span>
+            <CardAddBtn label="Add product" onClick={() => navigate('/catalog')} />
+          </div>
+          <div className="card-body">
+            {products.length === 0 ? (
+              <div className="card-empty">No products yet</div>
+            ) : (
+              <div className="today-item-grid">
+                {products.map(p => {
+                  const st = PRODUCT_STATUS[p.status] ?? PRODUCT_STATUS.idea
+                  const nc = NICHE_COLORS[p.niche] ?? { bg: '#F1EFE8', color: '#444441' }
+                  return (
+                    <div key={p.id} className="today-product-cell" onClick={() => navigate(`/catalog/${p.id}`)}>
+                      <span className="today-product-emoji">{productEmoji(p.product_type)}</span>
+                      <span className="today-product-name">{p.name}</span>
+                      <span className="today-product-status" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Latest assets */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Latest assets</span>
+            <CardAddBtn label="Add asset" onClick={() => navigate('/assets')} />
+          </div>
+          <div className="card-body">
+            {assets.length === 0 ? (
+              <div className="card-empty">No assets yet</div>
+            ) : (
+              <div className="today-item-grid">
+                {assets.map(a => (
+                  <div key={a.id} className="today-asset-cell" onClick={() => navigate('/assets')}>
+                    {a.file_url ? (
+                      <img src={a.file_url} alt={a.filename} className="today-asset-thumb" />
+                    ) : (
+                      <span className="today-asset-emoji">{ROLE_EMOJI[a.role] ?? '📄'}</span>
+                    )}
+                    <span className="today-asset-name">{a.filename}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
     </div>

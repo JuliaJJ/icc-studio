@@ -1068,17 +1068,125 @@ a {
   margin-bottom: 14px;
 }
 
-.today-row2 {
+.today-grid-3 {
   display: grid;
-  grid-template-columns: 58fr 42fr;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.today-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   align-items: start;
 }
 
-.today-side {
+/* ─── Card add button ───────────────────────────────────────────────── */
+.card-add-btn {
+  background: none;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+
+.card-add-btn:hover {
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+}
+
+/* ─── Today item grids (products + assets) ──────────────────────────── */
+.today-item-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--color-border-tertiary);
+  margin: 4px 0;
+}
+
+.today-product-cell {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 5px;
+  padding: 10px 12px;
+  background: var(--color-background-secondary);
+  cursor: pointer;
+  transition: background 0.1s;
+  min-width: 0;
+}
+
+.today-product-cell:hover {
+  background: var(--color-background-tertiary);
+}
+
+.today-product-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.today-product-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.today-product-status {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 99px;
+  align-self: flex-start;
+}
+
+.today-asset-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 8px;
+  background: var(--color-background-secondary);
+  cursor: pointer;
+  transition: background 0.1s;
+  min-width: 0;
+  aspect-ratio: 1;
+}
+
+.today-asset-cell:hover {
+  background: var(--color-background-tertiary);
+}
+
+.today-asset-thumb {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.today-asset-emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.today-asset-name {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 /* ─── Task rows ─────────────────────────────────────────────────────── */
