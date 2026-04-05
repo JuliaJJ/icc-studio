@@ -68,20 +68,21 @@ export const NICHE_COLORS = {
 export const PLATFORMS = ['Etsy', 'Printify', 'KDP', 'Gumroad', 'Stan Store', 'Kittl']
 
 const GROUP_PALETTE = [
-  { accent: '#4C2F9E' },
-  { accent: '#27500A' },
-  { accent: '#0C447C' },
-  { accent: '#92400E' },
-  { accent: '#9F1239' },
-  { accent: '#0F766E' },
-  { accent: '#3730A3' },
-  { accent: '#92320C' },
+  '#4C2F9E', // purple
+  '#0C447C', // blue
+  '#0F766E', // teal
+  '#27500A', // green
+  '#92400E', // amber
+  '#9F1239', // rose
+  '#3730A3', // indigo
+  '#92320C', // orange
 ]
 
-export function groupColor(name) {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
-  return GROUP_PALETTE[h % GROUP_PALETTE.length].accent
+// Returns a { [groupName]: accentColor } map with guaranteed unique colors.
+// Groups are sorted alphabetically so the same set always gets the same assignment.
+export function buildGroupColors(links) {
+  const names = [...new Set(links.map(l => l.group || 'Other'))].sort()
+  return Object.fromEntries(names.map((name, i) => [name, GROUP_PALETTE[i % GROUP_PALETTE.length]]))
 }
 
 export const EVENT_TYPES = {

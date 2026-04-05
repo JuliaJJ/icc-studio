@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useBrand } from '../context/BrandContext'
-import { groupColor } from '../lib/constants'
+import { buildGroupColors } from '../lib/constants'
 
 const DEFAULT_GROUPS = ['Storefronts', 'Design tools', 'Marketing', 'Research tools', 'Fulfillment']
 
@@ -156,39 +156,43 @@ export default function QuickAccess() {
         </div>
       ) : (
         <div className="quick-access-grid">
-          {Object.entries(grouped).map(([group, groupLinks]) => {
-            const accent = groupColor(group)
-            return (
-            <div key={group} className="quick-access-card" style={{ borderTop: `3px solid ${accent}` }}>
-              <div className="quick-access-card-title" style={{ color: accent }}>{group}</div>
-              <div className="link-pills-grid">
-                {groupLinks.map((link) => {
-                  const globalIndex = links.findIndex(l => l === link)
-                  return (
-                    <div key={globalIndex} className="link-pill-wrapper">
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="link-pill"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="link-pill-dot" style={{ background: accent }} />
-                        <span className="link-pill-label">{link.name}</span>
-                      </a>
-                      <button
-                        className="link-pill-edit"
-                        onClick={() => openEdit(link, globalIndex)}
-                        title="Edit link"
-                      >
-                        ···
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )})}
+          {(() => {
+            const colorMap = buildGroupColors(links)
+            return Object.entries(grouped).map(([group, groupLinks]) => {
+              const accent = colorMap[group]
+              return (
+                <div key={group} className="quick-access-card" style={{ borderTop: `3px solid ${accent}` }}>
+                  <div className="quick-access-card-title" style={{ color: accent }}>{group}</div>
+                  <div className="link-pills-grid">
+                    {groupLinks.map((link) => {
+                      const globalIndex = links.findIndex(l => l === link)
+                      return (
+                        <div key={globalIndex} className="link-pill-wrapper">
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="link-pill"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="link-pill-dot" style={{ background: accent }} />
+                            <span className="link-pill-label">{link.name}</span>
+                          </a>
+                          <button
+                            className="link-pill-edit"
+                            onClick={() => openEdit(link, globalIndex)}
+                            title="Edit link"
+                          >
+                            ···
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })
+          })()}
         </div>
       )}
 

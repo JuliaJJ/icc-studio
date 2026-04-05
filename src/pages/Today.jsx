@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
-import { EVENT_TYPES, NICHE_COLORS, PRODUCT_STATUS, productEmoji, groupColor } from '../lib/constants'
+import { EVENT_TYPES, NICHE_COLORS, PRODUCT_STATUS, productEmoji, buildGroupColors } from '../lib/constants'
 
 
 const _now = new Date()
@@ -300,6 +300,7 @@ export default function Today() {
             {quickLinks.length === 0 ? (
               <div className="card-empty">No links yet — add them in Quick Access</div>
             ) : (() => {
+              const colorMap = buildGroupColors(quickLinks)
               const grouped = quickLinks.reduce((acc, link) => {
                 const key = link.group || 'Other'
                 if (!acc[key]) acc[key] = []
@@ -307,7 +308,7 @@ export default function Today() {
                 return acc
               }, {})
               return Object.entries(grouped).map(([group, links]) => {
-                const accent = groupColor(group)
+                const accent = colorMap[group]
                 return (
                   <div key={group} className="today-link-group">
                     <div className="today-link-group-label" style={{ color: accent }}>{group}</div>
