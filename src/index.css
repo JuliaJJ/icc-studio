@@ -1419,11 +1419,27 @@ a {
 }
 
 /* ─── Quick access link pills ───────────────────────────────────────── */
+.today-link-group {
+  padding: 8px 0 0;
+}
+
+.today-link-group + .today-link-group {
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+
+.today-link-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 14px 2px;
+}
+
 .quick-links-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 4px;
-  padding: 6px 10px 10px;
+  padding: 2px 10px 8px;
 }
 
 .link-pill {

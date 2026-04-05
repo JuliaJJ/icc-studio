@@ -299,16 +299,30 @@ export default function Today() {
           <div className="card-body">
             {quickLinks.length === 0 ? (
               <div className="card-empty">No links yet — add them in Quick Access</div>
-            ) : (
-              <div className="quick-links-grid">
-                {quickLinks.map((link, i) => (
-                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="link-pill">
-                    <span className="link-pill-dot" style={{ background: groupColor(link.group || 'Other') }} />
-                    <span className="link-pill-label">{link.name}</span>
-                  </a>
-                ))}
-              </div>
-            )}
+            ) : (() => {
+              const grouped = quickLinks.reduce((acc, link) => {
+                const key = link.group || 'Other'
+                if (!acc[key]) acc[key] = []
+                acc[key].push(link)
+                return acc
+              }, {})
+              return Object.entries(grouped).map(([group, links]) => {
+                const accent = groupColor(group)
+                return (
+                  <div key={group} className="today-link-group">
+                    <div className="today-link-group-label" style={{ color: accent }}>{group}</div>
+                    <div className="quick-links-grid">
+                      {links.map((link, i) => (
+                        <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="link-pill">
+                          <span className="link-pill-dot" style={{ background: accent }} />
+                          <span className="link-pill-label">{link.name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            })()}
           </div>
         </div>
 
