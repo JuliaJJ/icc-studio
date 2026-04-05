@@ -249,6 +249,7 @@ export default function Today() {
                       {(task.labels ?? []).map(l => (
                         <span key={l} className="task-label-tag">{l}</span>
                       ))}
+                      <span className={`priority-dot priority-dot--${task.priority}`} />
                       {task.due_date && task.due_date < TODAY && (
                         <span className="task-overdue">Overdue · {formatLaunchDate(task.due_date)}</span>
                       )}
