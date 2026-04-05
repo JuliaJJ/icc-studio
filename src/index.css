@@ -1145,9 +1145,6 @@ a {
   display: block;
 }
 
-.today-cell-thumb img[data-has-lightbox] {
-  cursor: zoom-in;
-}
 
 .today-cell-emoji {
   font-size: 22px;

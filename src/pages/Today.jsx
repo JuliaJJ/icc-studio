@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../context/BrandContext'
 import { EVENT_TYPES, NICHE_COLORS, PRODUCT_STATUS, productEmoji } from '../lib/constants'
-import ImageLightbox from '../components/ImageLightbox'
+
 
 const _now = new Date()
 const TODAY = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
@@ -89,11 +89,10 @@ export default function Today() {
     liveCount: 0, livePlatforms: [], draftCount: 0,
     openTasks: 0, todayTasks: 0, revenue: 0, revenueChange: null,
   })
-  const [tasks, setTasks]           = useState([])
-  const [launches, setLaunches]     = useState([])
-  const [products, setProducts]     = useState([])
-  const [assets, setAssets]         = useState([])
-  const [lightbox, setLightbox]     = useState(null) // { src, alt }
+  const [tasks, setTasks]     = useState([])
+  const [launches, setLaunches] = useState([])
+  const [products, setProducts] = useState([])
+  const [assets, setAssets]   = useState([])
 
   useEffect(() => {
     if (!activeBrand.id) return
@@ -326,12 +325,7 @@ export default function Today() {
                     <div key={p.id} className="today-product-cell" onClick={() => navigate(`/catalog/${p.id}`)}>
                       <div className="today-cell-thumb">
                         {p.signedUrl ? (
-                          <img
-                            src={p.signedUrl}
-                            alt={p.name}
-                            data-has-lightbox="1"
-                            onClick={e => { e.stopPropagation(); setLightbox({ src: p.signedUrl, alt: p.name }) }}
-                          />
+                          <img src={p.signedUrl} alt={p.name} />
                         ) : (
                           <span className="today-cell-emoji">{productEmoji(p.product_type)}</span>
                         )}
@@ -363,12 +357,7 @@ export default function Today() {
                   <div key={a.id} className="today-asset-cell" onClick={() => navigate('/assets')}>
                     <div className="today-cell-thumb">
                       {a.signedUrl ? (
-                        <img
-                          src={a.signedUrl}
-                          alt={a.filename}
-                          data-has-lightbox="1"
-                          onClick={e => { e.stopPropagation(); setLightbox({ src: a.signedUrl, alt: a.filename }) }}
-                        />
+                        <img src={a.signedUrl} alt={a.filename} />
                       ) : (
                         <span className="today-cell-emoji">{ROLE_EMOJI[a.role] ?? '📄'}</span>
                       )}
@@ -385,7 +374,6 @@ export default function Today() {
 
       </div>
 
-      {lightbox && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
     </div>
   )
 }
